@@ -86,7 +86,9 @@ with sync_playwright() as p:
             enviar_mensaje_a_slack(mensaje)
 
             pagina.wait_for_timeout(3000)
+        except Exception as e:
+          mensaje = f"❌ No encuentro la url!!!!!!!: {e}"
+          enviar_mensaje_a_slack(mensaje)
+
         finally:
-            mensaje = "❌ No encuentro la url!!!!!!!"
-            enviar_mensaje_a_slack(mensaje)
-            navegador.close()
+          navegador.close()
