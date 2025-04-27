@@ -1,0 +1,23 @@
+# Ignorar archivo .env (contiene secretos)
+.env
+
+# Ignorar configuraciones comunes
+*.log
+*.env.local
+*.env.production
+*.env.development
+*.env.test
+
+# Ignorar directorios de compilación y dependencias
+node_modules/
+dist/
+build/
+
+# Ignorar archivos de sistema
+.DS_Store   # macOS
+Thumbs.db   # Windows
+
+# Otros archivos sensibles
+*.pem
+*.key
+*.crt
