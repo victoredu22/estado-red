@@ -11,21 +11,10 @@ slack_token = os.getenv('SLACK_TOKEN')
 client = WebClient(token=slack_token)
 
 
-
-def enviar_mensaje_a_slack(mensaje):
-    try:
-        response = client.chat_postMessage(
-            channel="#estado-red",
-            text=f"Estado de red:\n{mensaje}"
-        )
-        print("Mensaje enviado:", response["ts"])
-    except SlackApiError as e:
-        print("Error al enviar mensaje:", e.response["error"])
-
 def enviar_mensaje_a_slack_error(mensaje):
     try:
         response = client.chat_postMessage(
-            channel="#estado-red",
+            channel="#estado-red-error",
             text=f"Estado de red:\n{mensaje}"
         )
         print("Mensaje enviado:", response["ts"])
@@ -68,7 +57,13 @@ with sync_playwright() as p:
         pagina = contexto.new_page()
 
         try:
-            pagina.goto(depto["url"])
+            try:
+                pagina.goto(depto["url"])
+            except Exception as e:
+                mensaje = f"❌ No se pudo conectar a {depto['nombre']} ({depto['url']}): {e}"
+                enviar_mensaje_a_slack_error(mensaje)
+                navegador.close()
+                continue  # Pasar al siguiente departamento
 
             # Llenar usuario y contraseña dinámicamente
             pagina.locator("input[type='text']").nth(0).fill(depto["usuario"])
@@ -78,17 +73,13 @@ with sync_playwright() as p:
             try:
                 pagina.locator("text=Acceder").nth(1).click()
             except Exception as e:
-                mensaje = f"No se pudo hacer clic en Acceder en {depto['nombre']}: {e}"
-                enviar_mensaje_a_slack(mensaje)
+                mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['nombre']}: {e}"
+                enviar_mensaje_a_slack_error(mensaje)
                 navegador.close()
-
-
-            enviar_mensaje_a_slack(mensaje)
+                continue
 
             pagina.wait_for_timeout(3000)
-        except Exception as e:
-          mensaje = f"❌ No encuentro la url!!!!!!!: {e}"
-          enviar_mensaje_a_slack(mensaje)
 
         finally:
-          navegador.close()
+            navegador.close()
+
