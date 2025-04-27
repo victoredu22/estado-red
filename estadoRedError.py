@@ -81,7 +81,7 @@ with sync_playwright() as p:
                 mensaje = f"No se pudo hacer clic en Acceder en {depto['nombre']}: {e}"
                 enviar_mensaje_a_slack(mensaje)
                 navegador.close()
-                continue
+
 
             enviar_mensaje_a_slack(mensaje)
 

@@ -64,7 +64,6 @@ with sync_playwright() as p:
         navegador = p.chromium.launch(headless=False)
         contexto = navegador.new_context(ignore_https_errors=True)
         pagina = contexto.new_page()
-        
     try:
         pagina.goto(depto["url"])
 
@@ -79,8 +78,6 @@ with sync_playwright() as p:
             mensaje = f"No se pudo hacer clic en Acceder en {depto['nombre']}: {e}"
             enviar_mensaje_a_slack(mensaje)
             navegador.close()
-            continue
-
         # Esperar IP
         try:
             pagina.wait_for_selector("#lan-info-ip", timeout=5000)
@@ -105,3 +102,4 @@ with sync_playwright() as p:
 
     finally:
         navegador.close()
+
