@@ -4,6 +4,8 @@ from slack_sdk.errors import SlackApiError
 
 from dotenv import load_dotenv
 import os
+import json
+
 
 load_dotenv()  # Carga las variables del archivo .env
 
@@ -21,50 +23,35 @@ def enviar_mensaje_a_slack_error(mensaje):
     except SlackApiError as e:
         print("Error al enviar mensaje:", e.response["error"])
 
-# Lista de departamentos con su IP, usuario y contraseña
-departamentos = [
-    {
-        "nombre": "Departamento 6",
-        "url": "http://192.168.1.58",
-        "usuario": "pablo6",
-        "contrasena": "319923pablo6"
-    },
-    {
-        "nombre": "Departamento 5",
-        "url": "http://192.168.1.57",
-        "usuario": "pablo5",
-        "contrasena": "319923pablo5"
-    },
-    {
-        "nombre": "Departamento 4",
-        "url": "http://192.168.1.56",
-        "usuario": "pablo4",
-        "contrasena": "319923pablo4"
-    },
-    {
-        "nombre": "Departamento 1",
-        "url": "http://192.168.1.55",
-        "usuario": "pablo1",
-        "contrasena": "319923pablo"
-    },
-    # Agrega más si quieres
-]
+
+# Abrir y leer el archivo
+with open('departamentos.txt', 'r', encoding='utf-8') as f:
+    departamentos = json.load(f)
+
 
 with sync_playwright() as p:
     for depto in departamentos:
+
         navegador = p.chromium.launch(headless=False)
         contexto = navegador.new_context(ignore_https_errors=True)
         pagina = contexto.new_page()
+        intentosDepto = depto['intentos'];
 
         try:
             try:
                 pagina.goto(depto["url"])
             except Exception as e:
-                mensaje = f"❌ No se pudo conectar a {depto['nombre']} ({depto['url']}): {e}"
-                enviar_mensaje_a_slack_error(mensaje)
-                navegador.close()
-                continue  # Pasar al siguiente departamento
+                
+                    depto["intentos"] = intentosDepto + 1
+                    with open('departamentos.txt', 'w', encoding='utf-8') as f:
+                        json.dump(departamentos, f, indent=4, ensure_ascii=False)
 
+                    if intentosDepto < 5:    
+                        mensaje = f"❌ No se pudo conectar a {depto['nombre']} ({depto['url']}): {e}"
+                        enviar_mensaje_a_slack_error(mensaje)
+                    navegador.close()
+                    continue  # Pasar al siguiente departamento
+        
             # Llenar usuario y contraseña dinámicamente
             pagina.locator("input[type='text']").nth(0).fill(depto["usuario"])
             pagina.locator("input[type='password']").nth(0).fill(depto["contrasena"])

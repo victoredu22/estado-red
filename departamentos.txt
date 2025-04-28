@@ -1,0 +1,34 @@
+[
+    {
+        "id": 6,
+        "nombre": "Departamento 6",
+        "url": "http://192.168.1.58",
+        "usuario": "pablo6",
+        "contrasena": "319923pablo6",
+        "intentos": 0
+    },
+    {
+        "id": 5,
+        "nombre": "Departamento 5",
+        "url": "http://192.168.1.57",
+        "usuario": "pablo5",
+        "contrasena": "319923pablo5",
+        "intentos": 0
+    },
+    {
+        "id": 4,
+        "nombre": "Departamento 4",
+        "url": "http://192.168.1.56",
+        "usuario": "pablo4",
+        "contrasena": "319923pablo4",
+        "intentos": 0
+    },
+    {
+        "id": 1,
+        "nombre": "Departamento 1",
+        "url": "http://192.168.1.55",
+        "usuario": "pablo1",
+        "contrasena": "319923pablo",
+        "intentos": 0
+    }
+]
