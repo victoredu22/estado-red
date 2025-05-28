@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright, TimeoutError
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from connection import get_apartment, update_apartment
 
 from dotenv import load_dotenv
 import os
@@ -24,49 +25,51 @@ def enviar_mensaje_a_slack_error(mensaje):
         print("Error al enviar mensaje:", e.response["error"])
 
 
-# Abrir y leer el archivo
-with open('departamentos.txt', 'r', encoding='utf-8') as f:
-    departamentos = json.load(f)
 
+def main():
 
-with sync_playwright() as p:
-    for depto in departamentos:
+    apartamentos = get_apartment()
 
-        navegador = p.chromium.launch(headless=False)
-        contexto = navegador.new_context(ignore_https_errors=True)
-        pagina = contexto.new_page()
-        intentosDepto = depto['intentos'];
+    with sync_playwright() as p:
+        for depto in apartamentos:
 
-        try:
+            navegador = p.chromium.launch(headless=False)
+            contexto = navegador.new_context(ignore_https_errors=True)
+            pagina = contexto.new_page()
+            intentosDepto = depto["attemps"];
+
             try:
-                pagina.goto(depto["url"])
-            except Exception as e:
-                
-                    depto["intentos"] = intentosDepto + 1
-                    with open('departamentos.txt', 'w', encoding='utf-8') as f:
-                        json.dump(departamentos, f, indent=4, ensure_ascii=False)
+                try:
+                    pagina.goto(depto["url"])
+                except Exception as e:
+                    
+                        # Actualiza intentos + 1
+                        resultado = update_apartment(depto["id"], {"attemps": intentosDepto + 1})
 
-                    if intentosDepto < 5:    
-                        mensaje = f"❌ No se pudo conectar a {depto['nombre']} ({depto['url']}): {e}"
-                        enviar_mensaje_a_slack_error(mensaje)
+                        if intentosDepto < 5:    
+                            mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
+                            enviar_mensaje_a_slack_error(mensaje)
+                        navegador.close()
+                        continue  # Pasar al siguiente departamento
+            
+                # Llenar usuario y contraseña dinámicamente
+                pagina.locator("input[type='text']").nth(0).fill(depto["name"])
+                pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+
+                # Intentar login
+                try:
+                    pagina.locator("text=Acceder").nth(1).click()
+                except Exception as e:
+                    mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['name']}: {e}"
+                    enviar_mensaje_a_slack_error(mensaje)
                     navegador.close()
-                    continue  # Pasar al siguiente departamento
-        
-            # Llenar usuario y contraseña dinámicamente
-            pagina.locator("input[type='text']").nth(0).fill(depto["usuario"])
-            pagina.locator("input[type='password']").nth(0).fill(depto["contrasena"])
+                    continue
 
-            # Intentar login
-            try:
-                pagina.locator("text=Acceder").nth(1).click()
-            except Exception as e:
-                mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['nombre']}: {e}"
-                enviar_mensaje_a_slack_error(mensaje)
+                pagina.wait_for_timeout(3000)
+
+            finally:
                 navegador.close()
-                continue
 
-            pagina.wait_for_timeout(3000)
 
-        finally:
-            navegador.close()
-
+if __name__ == "__main__":
+    main()
