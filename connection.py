@@ -11,7 +11,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 def get_collection(db_name: str, collection_name: str):
     try:
         print(f"🔄 Conectando a MongoDB con URI: {MONGO_URI}")
-        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000,tls=True)
         client.server_info()
         db = client[db_name]
         print(f"✅ Conectado a la base de datos: {db_name}, colección: {collection_name}")
