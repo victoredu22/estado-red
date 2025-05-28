@@ -53,7 +53,7 @@ def main():
                         continue  # Pasar al siguiente departamento
             
                 # Llenar usuario y contraseña dinámicamente
-                pagina.locator("input[type='text']").nth(0).fill(depto["name"])
+                pagina.locator("input[type='text']").nth(0).fill(depto["user"])
                 pagina.locator("input[type='password']").nth(0).fill(depto["password"])
 
                 # Intentar login
