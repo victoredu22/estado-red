@@ -1,0 +1,34 @@
+[
+    {
+        "id": 6,
+        "name": "Departamento 6",
+        "url": "http://192.168.1.58",
+        "user": "pablo6",
+        "password": "319923pablo6",
+        "attemps": 0
+    },
+    {
+        "id": 5,
+        "name": "Departamento 5",
+        "url": "http://192.168.1.57",
+        "user": "pablo5",
+        "password": "319923pablo5",
+        "attemps": 0
+    },
+    {
+        "id": 4,
+        "name": "Departamento 4",
+        "url": "http://192.168.1.56",
+        "user": "pablo4",
+        "password": "319923pablo4",
+        "attemps": 0
+    },
+    {
+        "id": 1,
+        "name": "Departamento 1",
+        "url": "http://192.168.1.55",
+        "user": "pablo1",
+        "password": "319923pablo",
+        "attemps": 0
+    }
+]
