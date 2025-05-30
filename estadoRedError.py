@@ -45,8 +45,8 @@ def obtener_apartamentos():
 def actualizar_apartamento(apartamento_id, data):
     try:
         url = f"{api_url}/{apartamento_id}"
-        print(f"Enviando PUT a {url} con data: {data}")
-        response = requests.put(url, json=data)
+        print(f"Enviando PATCH a {url} con data: {data}")
+        response = requests.patch(url, json=data)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -65,14 +65,14 @@ def main():
             contexto = navegador.new_context(ignore_https_errors=True)
             pagina = contexto.new_page()
             intentosDepto = depto["attemps"];
-
+            print(intentosDepto)
             try:
                 try:
                     pagina.goto(depto["url"])
                 except Exception as e:
                     
                         # Actualiza intentos + 1
-                        actualizar_apartamento(depto["id"], {"attemps": intentosDepto + 1})
+                        actualizar_apartamento(depto["_id"], {"attemps": intentosDepto + 1})
 
                         if intentosDepto < 5:    
                             mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
