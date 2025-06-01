@@ -48,8 +48,6 @@ def actualizar_apartamento(apartamento_id, data):
     except requests.RequestException as e:
         enviar_mensaje_a_slack_error(f"❌ Error al actualizar apartamento {apartamento_id}: {e}")
 
-
-
 def main():
 
     apartamentos = obtener_apartamentos()
@@ -61,18 +59,20 @@ def main():
             pagina = contexto.new_page()
 
             # Actualiza intentos a 0 (por ejemplo)
-            actualizar_apartamento(depto["id"], {"attemps": 0})
+            actualizar_apartamento(depto["id"], {"attempts": 0})
             
 
             try:
                 try:
                     pagina.goto(depto["url"])
                 except Exception as e:
+                    # Actualiza intentos + 1
+                    actualizar_apartamento(depto["id"], {"attempts": intentosDepto + 1, "status":false})
                     mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
-                    enviar_mensaje_a_slack(mensaje)
+                    enviar_mensaje_a_slack_error(mensaje)
                     navegador.close()
                     continue
-
+   
                 pagina.locator("input[type='text']").nth(0).fill(depto["user"])
                 pagina.locator("input[type='password']").nth(0).fill(depto["password"])
 
