@@ -5,7 +5,8 @@
         "url": "http://192.168.1.58",
         "user": "pablo6",
         "password": "319923pablo6",
-        "attemps": 0
+        "attempts": 0,
+        "status":true
     },
     {
         "id": 5,
@@ -13,7 +14,8 @@
         "url": "http://192.168.1.57",
         "user": "pablo5",
         "password": "319923pablo5",
-        "attemps": 0
+        "attempts": 0,
+        "status":true
     },
     {
         "id": 4,
@@ -21,7 +23,8 @@
         "url": "http://192.168.1.56",
         "user": "pablo4",
         "password": "319923pablo4",
-        "attemps": 0
+        "attempts": 0,
+        "status":true
     },
     {
         "id": 1,
@@ -29,6 +32,7 @@
         "url": "http://192.168.1.55",
         "user": "pablo1",
         "password": "319923pablo",
-        "attemps": 0
+        "attempts": 0,
+        "status":true
     }
 ]

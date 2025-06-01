@@ -22,6 +22,16 @@ def enviar_mensaje_a_slack(mensaje):
         print("Error al enviar mensaje:", e.response["error"])
 
 
+def enviar_mensaje_a_slack_error(mensaje):
+    try:
+        response = client.chat_postMessage(
+            channel="#estado-red-error",
+            text=f"Estado de red:\n{mensaje}"
+        )
+        print("Mensaje enviado:", response["ts"])
+    except SlackApiError as e:
+        print("Error al enviar mensaje:", e.response["error"])
+        
 def obtener_apartamentos():
     try:
         response = requests.get(api_url)
@@ -41,8 +51,8 @@ def obtener_apartamentos():
 def actualizar_apartamento(apartamento_id, data):
     try:
         url = f"{api_url}/{apartamento_id}"
-        print(f"Enviando PUT a {url} con data: {data}")
-        response = requests.put(url, json=data)
+        print(f"Enviando Patch a {url} con data: {data}")
+        response = requests.patch(url, json=data)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -59,7 +69,7 @@ def main():
             pagina = contexto.new_page()
 
             # Actualiza intentos a 0 (por ejemplo)
-            actualizar_apartamento(depto["id"], {"attempts": 0})
+            actualizar_apartamento(depto["_id"], {"attemps": 0})
             
 
             try:
