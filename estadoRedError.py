@@ -5,16 +5,17 @@ import requests
 from dotenv import load_dotenv
 import os
 import json
-
+import socketio
 
 load_dotenv()  # Carga las variables del archivo .env
 
 slack_token = os.getenv('SLACK_TOKEN')
 api_url = os.getenv('API_APARTMENTS_URL') 
-
 client = WebClient(token=slack_token)
 
 
+sio = socketio.Client()
+sio_url = os.getenv('SERVER_SOCKET')
 def enviar_mensaje_a_slack_error(mensaje):
     try:
         response = client.chat_postMessage(
@@ -56,6 +57,7 @@ def main():
 
     apartamentos = obtener_apartamentos()
 
+    sio.connect(sio_url)
     with sync_playwright() as p:
         for depto in apartamentos:
 
@@ -63,6 +65,7 @@ def main():
             contexto = navegador.new_context(ignore_https_errors=True)
             pagina = contexto.new_page()
             intentosDepto = depto["attempts"]
+            sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
             print(intentosDepto)
             try:
@@ -95,8 +98,9 @@ def main():
                 pagina.wait_for_timeout(3000)
 
             finally:
+                sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
                 navegador.close()
 
-
+    sio.disconnect()
 if __name__ == "__main__":
     main()
