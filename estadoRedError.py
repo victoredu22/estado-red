@@ -65,9 +65,10 @@ def main():
             contexto = navegador.new_context(ignore_https_errors=True)
             pagina = contexto.new_page()
             intentosDepto = depto["attempts"]
+
+            actualizar_apartamento(depto["_id"], {"status": 'true'})
             sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
-            print(intentosDepto)
             try:
                 try:
                     pagina.goto(depto["url"]+"")
