@@ -69,15 +69,16 @@ def main():
             pagina = contexto.new_page()
 
             # Actualiza intentos a 0 (por ejemplo)
-            actualizar_apartamento(depto["_id"], {"attemps": 0})
+            actualizar_apartamento(depto["_id"], {"status": 'true'})
             
 
             try:
                 try:
                     pagina.goto(depto["url"])
                 except Exception as e:
+                    intentosDepto = depto["attempts"]
                     # Actualiza intentos + 1
-                    actualizar_apartamento(depto["id"], {"attempts": intentosDepto + 1, "status":false})
+                    actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
                     mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
                     enviar_mensaje_a_slack_error(mensaje)
                     navegador.close()

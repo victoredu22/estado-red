@@ -62,16 +62,16 @@ def main():
             navegador = p.chromium.launch(headless=False)
             contexto = navegador.new_context(ignore_https_errors=True)
             pagina = contexto.new_page()
-            intentosDepto = depto["attemps"];
+            intentosDepto = depto["attempts"]
 
             print(intentosDepto)
             try:
                 try:
-                    pagina.goto(depto["url"])
+                    pagina.goto(depto["url"]+"")
                 except Exception as e:
                     
                         # Actualiza intentos + 1
-                        actualizar_apartamento(depto["id"], {"attempts": intentosDepto + 1, "status":false})
+                        actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
 
                         if intentosDepto < 5:    
                             mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
