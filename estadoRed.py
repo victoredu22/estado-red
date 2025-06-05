@@ -73,7 +73,7 @@ def main():
             pagina = contexto.new_page()
 
             # Actualiza intentos a 0 (por ejemplo)
-            actualizar_apartamento(depto["_id"], {"status": 'true'})
+            actualizar_apartamento(depto["_id"], {"attempts":0, "status": 'true'})
             sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
             try:
