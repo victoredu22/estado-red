@@ -60,47 +60,47 @@ def main():
     sio.connect(sio_url)
     with sync_playwright() as p:
         for depto in apartamentos:
+            if depto.active
+                navegador = p.chromium.launch(headless=False)
+                contexto = navegador.new_context(ignore_https_errors=True)
+                pagina = contexto.new_page()
+                intentosDepto = depto["attempts"]
 
-            navegador = p.chromium.launch(headless=False)
-            contexto = navegador.new_context(ignore_https_errors=True)
-            pagina = contexto.new_page()
-            intentosDepto = depto["attempts"]
+                actualizar_apartamento(depto["_id"], {"status": 'true'})
+                sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
-            actualizar_apartamento(depto["_id"], {"status": 'true'})
-            sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
-
-            try:
                 try:
-                    pagina.goto(depto["url"]+"")
-                except Exception as e:
-                    
-                        # Actualiza intentos + 1
-                        actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
+                    try:
+                        pagina.goto(depto["url"]+"")
+                    except Exception as e:
+                        
+                            # Actualiza intentos + 1
+                            actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
 
-                        if intentosDepto < 5:    
-                            mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
-                            enviar_mensaje_a_slack_error(mensaje)
+                            if intentosDepto < 5:    
+                                mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
+                                enviar_mensaje_a_slack_error(mensaje)
+                            navegador.close()
+                            continue  # Pasar al siguiente departamento
+                
+                    # Llenar usuario y contraseña dinámicamente
+                    pagina.locator("input[type='text']").nth(0).fill(depto["user"])
+                    pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+
+                    # Intentar login
+                    try:
+                        pagina.locator("text=Acceder").nth(1).click()
+                    except Exception as e:
+                        mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['name']}: {e}"
+                        enviar_mensaje_a_slack_error(mensaje)
                         navegador.close()
-                        continue  # Pasar al siguiente departamento
-            
-                # Llenar usuario y contraseña dinámicamente
-                pagina.locator("input[type='text']").nth(0).fill(depto["user"])
-                pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+                        continue
 
-                # Intentar login
-                try:
-                    pagina.locator("text=Acceder").nth(1).click()
-                except Exception as e:
-                    mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['name']}: {e}"
-                    enviar_mensaje_a_slack_error(mensaje)
+                    pagina.wait_for_timeout(3000)
+
+                finally:
+                    sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
                     navegador.close()
-                    continue
-
-                pagina.wait_for_timeout(3000)
-
-            finally:
-                sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
-                navegador.close()
 
     sio.disconnect()
 if __name__ == "__main__":
