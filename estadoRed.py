@@ -68,7 +68,7 @@ def main():
     sio.connect(sio_url)
     with sync_playwright() as p:
         for depto in apartamentos:
-            if depto.active:
+            if depto["active"]:
                 navegador = p.chromium.launch(headless=False)
                 contexto = navegador.new_context(ignore_https_errors=True)
                 pagina = contexto.new_page()
