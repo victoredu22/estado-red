@@ -86,6 +86,7 @@ def main():
                         actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
                         mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
                         enviar_mensaje_a_slack_error(mensaje)
+                        sio.emit("canalFrontend", "Error " + str(depto["id"]))
                         navegador.close()
                         continue
     
@@ -97,6 +98,7 @@ def main():
                     except Exception as e:
                         mensaje = f"No se pudo hacer clic en Acceder en {depto['name']}: {e}"
                         enviar_mensaje_a_slack(mensaje)
+                        sio.emit("canalFrontend", "Error " + str(depto["id"]))
                         navegador.close()
                         continue
 
@@ -111,6 +113,7 @@ def main():
                         if pagina.url.endswith("/login") or "login" in pagina.title().lower():
                             mensaje = f"Credenciales incorrectas para {depto['name']}."
                         else:
+                            sio.emit("canalFrontend", "Error " + str(depto["id"]))
                             mensaje = f"No se encontró la IP. Timeout en {depto['name']}."
 
                     enviar_mensaje_a_slack(mensaje)
