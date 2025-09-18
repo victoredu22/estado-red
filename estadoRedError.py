@@ -9,9 +9,10 @@ import socketio
 
 load_dotenv()  # Carga las variables del archivo .env
 
-slack_token = os.getenv('SLACK_TOKEN')
+
 api_url = os.getenv('API_APARTMENTS_URL') 
-client = WebClient(token=slack_token)
+#slack_token = os.getenv('SLACK_TOKEN')
+#client = WebClient(token=slack_token)
 
 
 sio = socketio.Client()
@@ -39,7 +40,7 @@ def obtener_apartamentos():
         print("JSON decodificado:", data)
         return data
     except requests.RequestException as e:
-        enviar_mensaje_a_slack_error(f"❌ Error al obtener apartamentos: {e}")
+        #enviar_mensaje_a_slack_error(f"❌ Error al obtener apartamentos: {e}")
         return []
 
 
@@ -51,13 +52,13 @@ def actualizar_apartamento(apartamento_id, data):
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        enviar_mensaje_a_slack_error(f"❌ Error al actualizar apartamento {apartamento_id}: {e}")
+        #enviar_mensaje_a_slack_error(f"❌ Error al actualizar apartamento {apartamento_id}: {e}")
 
 def main():
 
     apartamentos = obtener_apartamentos()
 
-    sio.connect(sio_url)
+    #sio.connect(sio_url)
     with sync_playwright() as p:
         for depto in apartamentos:
             if depto["active"]:
@@ -67,7 +68,7 @@ def main():
                 intentosDepto = depto["attempts"]
 
                 actualizar_apartamento(depto["_id"], {"status": 'true'})
-                sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
+                #sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
                 try:
                     try:
@@ -79,7 +80,7 @@ def main():
 
                             if intentosDepto < 5:    
                                 mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
-                                enviar_mensaje_a_slack_error(mensaje)
+                                #enviar_mensaje_a_slack_error(mensaje)
                             navegador.close()
                             continue  # Pasar al siguiente departamento
                 
@@ -92,16 +93,16 @@ def main():
                         pagina.locator("text=Acceder").nth(1).click()
                     except Exception as e:
                         mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['name']}: {e}"
-                        enviar_mensaje_a_slack_error(mensaje)
+                        #enviar_mensaje_a_slack_error(mensaje)
                         navegador.close()
                         continue
 
                     pagina.wait_for_timeout(3000)
 
                 finally:
-                    sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
+                    #sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
                     navegador.close()
 
-    sio.disconnect()
+    #sio.disconnect()
 if __name__ == "__main__":
     main()
