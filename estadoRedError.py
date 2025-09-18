@@ -11,22 +11,9 @@ load_dotenv()  # Carga las variables del archivo .env
 
 
 api_url = os.getenv('API_APARTMENTS_URL') 
-#slack_token = os.getenv('SLACK_TOKEN')
-#client = WebClient(token=slack_token)
-
 
 sio = socketio.Client()
 sio_url = os.getenv('SERVER_SOCKET')
-def enviar_mensaje_a_slack_error(mensaje):
-    try:
-        response = client.chat_postMessage(
-            channel="#estado-red-error",
-            text=f"Estado de red:\n{mensaje}"
-        )
-        print("Mensaje enviado:", response["ts"])
-    except SlackApiError as e:
-        print("Error al enviar mensaje:", e.response["error"])
-
 
 def obtener_apartamentos():
     try:
@@ -40,8 +27,8 @@ def obtener_apartamentos():
         print("JSON decodificado:", data)
         return data
     except requests.RequestException as e:
-        #enviar_mensaje_a_slack_error(f"❌ Error al obtener apartamentos: {e}")
-        return []
+        print(f"Error al obtener apartamentos: {e}")
+        return None
 
 
 def actualizar_apartamento(apartamento_id, data):
@@ -52,13 +39,16 @@ def actualizar_apartamento(apartamento_id, data):
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        #enviar_mensaje_a_slack_error(f"❌ Error al actualizar apartamento {apartamento_id}: {e}")
+        print(f"Error al actualizar apartamento {apartamento_id}: {e}")
+        return None
+
+
 
 def main():
 
     apartamentos = obtener_apartamentos()
 
-    #sio.connect(sio_url)
+
     with sync_playwright() as p:
         for depto in apartamentos:
             if depto["active"]:
@@ -68,7 +58,6 @@ def main():
                 intentosDepto = depto["attempts"]
 
                 actualizar_apartamento(depto["_id"], {"status": 'true'})
-                #sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
                 try:
                     try:
@@ -80,7 +69,7 @@ def main():
 
                             if intentosDepto < 5:    
                                 mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
-                                #enviar_mensaje_a_slack_error(mensaje)
+                                print(mensaje)
                             navegador.close()
                             continue  # Pasar al siguiente departamento
                 
@@ -93,16 +82,15 @@ def main():
                         pagina.locator("text=Acceder").nth(1).click()
                     except Exception as e:
                         mensaje = f"❌ No se pudo hacer clic en Acceder en {depto['name']}: {e}"
-                        #enviar_mensaje_a_slack_error(mensaje)
                         navegador.close()
                         continue
 
                     pagina.wait_for_timeout(3000)
 
                 finally:
-                    #sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
+
                     navegador.close()
 
-    #sio.disconnect()
+
 if __name__ == "__main__":
     main()
