@@ -33,7 +33,8 @@ sio.wait()
 def main():
 
 
-    sio.connect(sio_url)
+    sio.connect(sio_url, transports=["websocket"], ssl_verify=False)
+
 
     sio.disconnect()
 if __name__ == "__main__":
