@@ -19,5 +19,11 @@ def connect_error(data):
 def disconnect():
     print("⚠️ Desconectado")
 
-sio.connect(sio_url, transports=["websocket"], socketio_path="/socket.io")
+
+sio.connect(
+    "https://cumbresanramon.cl",
+    transports=["websocket"],
+    socketio_path="/socket.io",
+    ssl=ssl_context
+)
 sio.wait()
