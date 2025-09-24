@@ -14,27 +14,7 @@ client = WebClient(token=slack_token)
 
 # sio = socketio.Client()
 # sio_url = os.getenv('SERVER_SOCKET')
-def enviar_mensaje_a_slack(mensaje):
-    try:
-        response = client.chat_postMessage(
-            channel="#estado-red",
-            text=f"Estado de red:\n{mensaje}"
-        )
-        print("Mensaje enviado:", response["ts"])
-    except SlackApiError as e:
-        print("Error al enviar mensaje:", e.response["error"])
 
-
-def enviar_mensaje_a_slack_error(mensaje):
-    try:
-        response = client.chat_postMessage(
-            channel="#estado-red-error",
-            text=f"Estado de red:\n{mensaje}"
-        )
-        print("Mensaje enviado:", response["ts"])
-    except SlackApiError as e:
-        print("Error al enviar mensaje:", e.response["error"])
-        
 def obtener_apartamentos():
     try:
         url = f"{api_url}/apartment/all"
@@ -48,7 +28,7 @@ def obtener_apartamentos():
         print("JSON decodificado:", data)
         return data
     except requests.RequestException as e:
-        enviar_mensaje_a_slack_error(f"❌ Error al obtener apartamentos: {e}")
+        print(f"Error al obtener apartamentos: {e}")
         return []
 
 
@@ -60,8 +40,8 @@ def actualizar_apartamento(apartamento_id, data):
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        enviar_mensaje_a_slack_error(f"❌ Error al actualizar apartamento {apartamento_id}: {e}")
-
+        print(f"Error al obtener apartamentos: {e}")
+        return None
 def main():
 
     apartamentos = obtener_apartamentos()
