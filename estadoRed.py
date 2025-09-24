@@ -1,6 +1,5 @@
 from playwright.sync_api import sync_playwright, TimeoutError
 import requests
-import socketio
 import os
 from dotenv import load_dotenv
 
@@ -9,25 +8,6 @@ from dotenv import load_dotenv
 # =====================
 load_dotenv()  # carga variables desde .env
 api_url = os.getenv("API_APARTMENTS_URL")
-sio_url = os.getenv("SERVER_SOCKET")
-
-# =====================
-# CLIENTE SOCKET.IO
-# =====================
-sio = socketio.Client()
-
-@sio.event
-def connect():
-    print(f"✅ Conectado al servidor: {sio_url}")
-
-@sio.event
-def connect_error(data):
-    print("❌ Error de conexión:", data)
-
-@sio.event
-def disconnect():
-    print("⚠️ Desconectado")
-
 
 # =====================
 # FUNCIONES API
@@ -66,9 +46,6 @@ def actualizar_apartamento(apartamento_id, data):
 # =====================
 def main():
     try:
-        # Conexión inicial al socket
-        #sio.connect(sio_url, transports=["polling", "websocket"], socketio_path="/socket.io")
-
         apartamentos = obtener_apartamentos()
 
         with sync_playwright() as p:
@@ -79,17 +56,23 @@ def main():
                     pagina = contexto.new_page()
 
                     # Resetear intentos
-                    actualizar_apartamento(depto["_id"], {"attempts": 0, "status": "true", "step":"iniciando intento"})
-                    #sio.emit("canalFrontend", f"Ejecutando script departamento número: {depto['id']}")
+                    actualizar_apartamento(depto["_id"], {
+                        "attempts": 0,
+                        "status": "true",
+                        "step": "iniciando intento"
+                    })
 
                     try:
                         try:
                             pagina.goto(depto["url"])
                         except Exception as e:
                             intentosDepto = depto["attempts"]
-                            actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status": "false", "step":"fallo la url del depto"})
+                            actualizar_apartamento(depto["_id"], {
+                                "attempts": intentosDepto + 1,
+                                "status": "false",
+                                "step": "fallo la url del depto"
+                            })
                             print(f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}")
-                            #sio.emit("canalFrontend", f"Error {depto['id']}")
                             navegador.close()
                             continue
 
@@ -100,7 +83,12 @@ def main():
                             pagina.locator("text=Acceder").nth(1).click()
                         except Exception as e:
                             print(f"⚠️ No se pudo hacer clic en Acceder en {depto['name']}: {e}")
-                            actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status": "false", "step":"fallo credenciales"})
+                            intentosDepto = depto["attempts"]
+                            actualizar_apartamento(depto["_id"], {
+                                "attempts": intentosDepto + 1,
+                                "status": "false",
+                                "step": "fallo credenciales"
+                            })
                             navegador.close()
                             continue
 
@@ -114,20 +102,21 @@ def main():
                         except TimeoutError:
                             if pagina.url.endswith("/login") or "login" in pagina.title().lower():
                                 print(f"⚠️ Credenciales incorrectas para {depto['name']}.")
-                                actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status": "false", "step":"credenciales incorrectas login"})
+                                intentosDepto = depto["attempts"]
+                                actualizar_apartamento(depto["_id"], {
+                                    "attempts": intentosDepto + 1,
+                                    "status": "false",
+                                    "step": "credenciales incorrectas login"
+                                })
                             else:
-                                sio.emit("canalFrontend", f"Error {depto['id']}")
                                 print(f"⚠️ No se encontró la IP. Timeout en {depto['name']}.")
                         pagina.wait_for_timeout(3000)
 
                     finally:
-                        #sio.emit("canalFrontend", f"Finalizado script departamento número: {depto['id']}")
                         navegador.close()
 
     except Exception as e:
-        print("❌ No se pudo conectar:", e)
-    finally:
-    #sio.disconnect()
+        print("❌ Error general:", e)
 
 
 # =====================
