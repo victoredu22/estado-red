@@ -1,4 +1,3 @@
-import ssl
 import socketio
 
 sio = socketio.Client()
@@ -18,8 +17,8 @@ def disconnect():
 def main():
     try:
         sio.connect(
-            "https://cumbresanramon.cl",     # URL en seco
-            transports=["websocket"],
+            "https://cumbresanramon.cl",
+            transports=["polling", "websocket"],   # primero polling, luego websocket
             socketio_path="/socket.io"
         )
         sio.wait()
