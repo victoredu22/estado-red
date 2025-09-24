@@ -12,8 +12,8 @@ slack_token = os.getenv("SLACK_TOKEN")
 api_url = os.getenv('API_APARTMENTS_URL') 
 client = WebClient(token=slack_token)
 
-sio = socketio.Client()
-sio_url = os.getenv('SERVER_SOCKET')
+# sio = socketio.Client()
+# sio_url = os.getenv('SERVER_SOCKET')
 def enviar_mensaje_a_slack(mensaje):
     try:
         response = client.chat_postMessage(
