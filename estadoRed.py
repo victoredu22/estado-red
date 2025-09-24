@@ -1,24 +1,19 @@
-from playwright.sync_api import sync_playwright, TimeoutError
+import ssl
 import socketio
 import os
-import ssl
-import certifi
 from dotenv import load_dotenv
 
-load_dotenv()  # Carga las variables del archivo .env
+# ⚠️ Ignorar validación SSL globalmente
+ssl._create_default_https_context = ssl._create_unverified_context
 
-api_url = os.getenv("API_APARTMENTS_URL")
+load_dotenv()
+
 sio_url = os.getenv("SERVER_SOCKET")
-
 sio = socketio.Client()
-
-# Crear contexto SSL seguro usando certifi
-ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 @sio.event
 def connect():
     print("✅ Conectado al servidor:", sio_url)
-    sio.emit("test", "Hola desde Python")
 
 @sio.event
 def connect_error(data):
@@ -28,19 +23,13 @@ def connect_error(data):
 def disconnect():
     print("⚠️ Desconectado")
 
-
 def main():
     try:
-        sio.connect(
-            sio_url,
-            transports=["websocket"],
-            socketio_path="/socket.io",
-            ssl=ssl_context
-        )
-        sio.wait()
+        sio.connect(sio_url, transports=["websocket"], socketio_path="socket.io")
     except Exception as e:
-        print("❌ Error al conectar:", e)
+        print("❌ Error de conexión:", e)
 
+    sio.wait()
 
 if __name__ == "__main__":
     main()
