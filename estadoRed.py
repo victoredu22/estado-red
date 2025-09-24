@@ -25,7 +25,7 @@ def disconnect():
 
 def main():
     try:
-        sio.connect(sio_url, transports=["websocket"], socketio_path="socket.io")
+        sio.connect('https://cumbresanramon.cl', transports=["websocket"], socketio_path="socket.io")
     except Exception as e:
         print("❌ Error de conexión:", e)
 
