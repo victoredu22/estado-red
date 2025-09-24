@@ -41,7 +41,66 @@ def actualizar_apartamento(apartamento_id, data):
         print(f"Error al obtener apartamentos: {e}")
         return None
 def main():
+
+    apartamentos = obtener_apartamentos()
+
     sio.connect(sio_url)
+    with sync_playwright() as p:
+        for depto in apartamentos:
+            if depto["active"]:
+                navegador = p.chromium.launch(headless=False)
+                contexto = navegador.new_context(ignore_https_errors=True)
+                pagina = contexto.new_page()
+
+                # # Actualiza intentos a 0 (por ejemplo)
+                actualizar_apartamento(depto["_id"], {"attempts":0, "status": 'true'})
+                sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
+
+                try:
+                    try:
+                        pagina.goto(depto["url"])
+                    except Exception as e:
+                        intentosDepto = depto["attempts"]
+                        # Actualiza intentos + 1
+                        actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
+                        mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
+                  
+                        sio.emit("canalFrontend", "Error " + str(depto["id"]))
+                        navegador.close()
+                        continue
+    
+                    pagina.locator("input[type='text']").nth(0).fill(depto["user"])
+                    pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+
+                    try:
+                        pagina.locator("text=Acceder").nth(1).click()
+                    except Exception as e:
+                        mensaje = f"No se pudo hacer clic en Acceder en {depto['name']}: {e}"
+              
+                        sio.emit("canalFrontend", "Error " + str(depto["id"]))
+                        navegador.close()
+                        continue
+
+                    try:
+                        pagina.wait_for_selector("#lan-info-ip", timeout=5000)
+                        if pagina.locator("#lan-info-ip").is_visible():
+                            ip_texto = pagina.locator("#lan-info-ip pre").inner_text()
+                            mensaje = f"IP encontrada en {depto['name']}: `{ip_texto}`"
+                        else:
+                            mensaje = f"Se ingresó, pero no se encontró la IP en {depto['name']}."
+                    except TimeoutError:
+                        if pagina.url.endswith("/login") or "login" in pagina.title().lower():
+                            mensaje = f"Credenciales incorrectas para {depto['name']}."
+                        else:
+                            sio.emit("canalFrontend", "Error " + str(depto["id"]))
+                            mensaje = f"No se encontró la IP. Timeout en {depto['name']}."
+
+                  
+                    pagina.wait_for_timeout(3000)
+
+                finally:
+                    sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
+                    navegador.close()
 
     sio.disconnect()
 if __name__ == "__main__":
