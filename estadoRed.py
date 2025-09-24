@@ -37,9 +37,9 @@ def enviar_mensaje_a_slack_error(mensaje):
         
 def obtener_apartamentos():
     try:
-        response = requests.get(api_url)
         url = f"{api_url}/apartment/all"
-        print("API URL:", api_url)
+        response = requests.get(url)
+        print("API URL:", url)
         print("Código de estado:", response.status_code)
         print("Texto crudo de la respuesta:", response.text)
 
