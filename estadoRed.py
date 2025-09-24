@@ -1,7 +1,10 @@
-import os
-import socketio
 import ssl
+import socketio
+import os
 from dotenv import load_dotenv
+
+# ⚠️ Ignorar validación SSL globalmente
+ssl._create_default_https_context = ssl._create_unverified_context
 
 load_dotenv()
 
@@ -22,17 +25,9 @@ def disconnect():
 
 def main():
     try:
-        # Intento normal
         sio.connect(sio_url, transports=["websocket"], socketio_path="socket.io")
     except Exception as e:
-        print("⚠️ Error SSL, reintentando sin verificación:", e)
-        # Intento ignorando certificados
-        sio.connect(
-            sio_url,
-            transports=["websocket"],
-            socketio_path="socket.io",
-            sslopt={"cert_reqs": ssl.CERT_NONE}
-        )
+        print("❌ Error de conexión:", e)
 
     sio.wait()
 
