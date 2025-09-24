@@ -1,29 +1,102 @@
+from playwright.sync_api import sync_playwright, TimeoutError
+
+
+from connection import get_apartment, update_apartment
+import requests
+from dotenv import load_dotenv
+import os
 import socketio
 
-sio = socketio.Client()
+load_dotenv()  # Carga las variables del archivo .env
+api_url = os.getenv('API_APARTMENTS_URL') 
 
-@sio.event
-def connect():
-    print("✅ Conectado al servidor")
 
-@sio.event
-def connect_error(data):
-    print("❌ Error de conexión:", data)
-
-@sio.event
-def disconnect():
-    print("⚠️ Desconectado")
-
-def main():
+def obtener_apartamentos():
     try:
-        sio.connect(
-            "https://cumbresanramon.cl",
-            transports=["polling", "websocket"],   # primero polling, luego websocket
-            socketio_path="/socket.io"
-        )
-        sio.wait()
-    except Exception as e:
-        print("❌ No se pudo conectar:", e)
+        url = f"{api_url}/apartment/all"
+        response = requests.get(url)
+        print("API URL:", url)
+        print("Código de estado:", response.status_code)
+        print("Texto crudo de la respuesta:", response.text)
 
+        response.raise_for_status()
+        data = response.json()
+        print("JSON decodificado:", data)
+        return data
+    except requests.RequestException as e:
+        print(f"Error al obtener apartamentos: {e}")
+        return []
+
+
+def actualizar_apartamento(apartamento_id, data):
+    try:
+        url = f"{api_url}/apartment/{apartamento_id}"
+        print(f"Enviando Patch a {url} con data: {data}")
+        response = requests.patch(url, json=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Error al obtener apartamentos: {e}")
+        return None
+def main():
+
+    apartamentos = obtener_apartamentos()
+
+    sio.connect(sio_url)
+    with sync_playwright() as p:
+        for depto in apartamentos:
+            if depto["active"]:
+                navegador = p.chromium.launch(headless=False)
+                contexto = navegador.new_context(ignore_https_errors=True)
+                pagina = contexto.new_page()
+
+                # Actualiza intentos a 0 (por ejemplo)
+                actualizar_apartamento(depto["_id"], {"attempts":0, "status": 'true'})
+                sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
+
+                try:
+                    try:
+                        pagina.goto(depto["url"])
+                    except Exception as e:
+                        intentosDepto = depto["attempts"]
+                        # Actualiza intentos + 1
+                        actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
+                        mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
+
+                        sio.emit("canalFrontend", "Error " + str(depto["id"]))
+                        navegador.close()
+                        continue
+    
+                    pagina.locator("input[type='text']").nth(0).fill(depto["user"])
+                    pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+
+                    try:
+                        pagina.locator("text=Acceder").nth(1).click()
+                    except Exception as e:
+                        mensaje = f"No se pudo hacer clic en Acceder en {depto['name']}: {e}"
+                        sio.emit("canalFrontend", "Error " + str(depto["id"]))
+                        navegador.close()
+                        continue
+
+                    try:
+                        pagina.wait_for_selector("#lan-info-ip", timeout=5000)
+                        if pagina.locator("#lan-info-ip").is_visible():
+                            ip_texto = pagina.locator("#lan-info-ip pre").inner_text()
+                            mensaje = f"IP encontrada en {depto['name']}: `{ip_texto}`"
+                        else:
+                            mensaje = f"Se ingresó, pero no se encontró la IP en {depto['name']}."
+                    except TimeoutError:
+                        if pagina.url.endswith("/login") or "login" in pagina.title().lower():
+                            mensaje = f"Credenciales incorrectas para {depto['name']}."
+                        else:
+                            sio.emit("canalFrontend", "Error " + str(depto["id"]))
+                            mensaje = f"No se encontró la IP. Timeout en {depto['name']}."
+                    pagina.wait_for_timeout(3000)
+
+                finally:
+                    sio.emit("canalFrontend", "finalizado script departamento numero: " + str(depto["id"]))
+                    navegador.close()
+
+    sio.disconnect()
 if __name__ == "__main__":
     main()
