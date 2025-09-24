@@ -1,7 +1,5 @@
 from playwright.sync_api import sync_playwright, TimeoutError
 
-
-from connection import get_apartment, update_apartment
 import requests
 from dotenv import load_dotenv
 import os
