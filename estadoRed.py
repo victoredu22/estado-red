@@ -1,19 +1,17 @@
 from playwright.sync_api import sync_playwright, TimeoutError
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 from connection import get_apartment, update_apartment
 import requests
-from dotenv import load_dotenv
-import os
 import socketio
+import os
+from dotenv import load_dotenv
 
 load_dotenv()  # Carga las variables del archivo .env
-slack_token = os.getenv("SLACK_TOKEN")
-api_url = os.getenv('API_APARTMENTS_URL') 
-client = WebClient(token=slack_token)
 
-# sio = socketio.Client()
-# sio_url = os.getenv('SERVER_SOCKET')
+api_url = os.getenv('API_APARTMENTS_URL') 
+
+
+sio = socketio.Client()
+sio_url = os.getenv('SERVER_SOCKET')
 
 def obtener_apartamentos():
     try:
@@ -54,7 +52,7 @@ def main():
                 contexto = navegador.new_context(ignore_https_errors=True)
                 pagina = contexto.new_page()
 
-                # Actualiza intentos a 0 (por ejemplo)
+                # # Actualiza intentos a 0 (por ejemplo)
                 actualizar_apartamento(depto["_id"], {"attempts":0, "status": 'true'})
                 sio.emit("canalFrontend", "ejecutando script departamento numero: " + str(depto["id"]))
 
@@ -66,7 +64,7 @@ def main():
                         # Actualiza intentos + 1
                         actualizar_apartamento(depto["_id"], {"attempts": intentosDepto + 1, "status":'false'})
                         mensaje = f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}"
-                        enviar_mensaje_a_slack_error(mensaje)
+                  
                         sio.emit("canalFrontend", "Error " + str(depto["id"]))
                         navegador.close()
                         continue
@@ -78,7 +76,7 @@ def main():
                         pagina.locator("text=Acceder").nth(1).click()
                     except Exception as e:
                         mensaje = f"No se pudo hacer clic en Acceder en {depto['name']}: {e}"
-                        enviar_mensaje_a_slack(mensaje)
+              
                         sio.emit("canalFrontend", "Error " + str(depto["id"]))
                         navegador.close()
                         continue
@@ -97,7 +95,7 @@ def main():
                             sio.emit("canalFrontend", "Error " + str(depto["id"]))
                             mensaje = f"No se encontró la IP. Timeout en {depto['name']}."
 
-                    enviar_mensaje_a_slack(mensaje)
+                  
                     pagina.wait_for_timeout(3000)
 
                 finally:
