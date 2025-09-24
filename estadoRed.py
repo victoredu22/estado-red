@@ -33,7 +33,12 @@ sio.wait()
 def main():
 
 
+    try:
+    sio.connect(sio_url, transports=["websocket"])
+except Exception as e:
+    print("⚠️ Error SSL, reintentando sin verificación:", e)
     sio.connect(sio_url, transports=["websocket"], ssl_verify=False)
+
 
 
     sio.disconnect()
