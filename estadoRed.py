@@ -67,7 +67,7 @@ def actualizar_apartamento(apartamento_id, data):
 def main():
     try:
         # Conexión inicial al socket
-        sio.connect(sio_url, transports=["polling", "websocket"], socketio_path="/socket.io")
+        #sio.connect(sio_url, transports=["polling", "websocket"], socketio_path="/socket.io")
 
         apartamentos = obtener_apartamentos()
 
@@ -118,7 +118,6 @@ def main():
                             else:
                                 sio.emit("canalFrontend", f"Error {depto['id']}")
                                 print(f"⚠️ No se encontró la IP. Timeout en {depto['name']}.")
-
                         pagina.wait_for_timeout(3000)
 
                     finally:
@@ -128,7 +127,7 @@ def main():
     except Exception as e:
         print("❌ No se pudo conectar:", e)
     finally:
-        #sio.disconnect()
+    #sio.disconnect()
 
 
 # =====================
