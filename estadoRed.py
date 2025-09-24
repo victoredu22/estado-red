@@ -1,14 +1,9 @@
-import ssl
-import socketio
-import os
+import os, ssl, certifi, socketio
 from dotenv import load_dotenv
 
-# ⚠️ Ignorar validación SSL globalmente
-ssl._create_default_https_context = ssl._create_unverified_context
-
 load_dotenv()
+sio_url = os.getenv("SERVER_SOCKET", "https://cumbresanramon.cl")
 
-sio_url = os.getenv("SERVER_SOCKET")
 sio = socketio.Client()
 
 @sio.event
@@ -25,11 +20,40 @@ def disconnect():
 
 def main():
     try:
-        sio.connect('https://cumbresanramon.cl', transports=["websocket"], socketio_path="socket.io")
+        # Primer intento: como en el PC que funcionaba
+        sio.connect(
+            sio_url,
+            transports=["websocket"],
+            socketio_path="/socket.io"
+        )
+        sio.wait()
     except Exception as e:
-        print("❌ Error de conexión:", e)
-
-    sio.wait()
+        print("⚠️ Primer intento falló:", e)
+        try:
+            # Segundo intento: con validación explícita vía certifi
+            sio.connect(
+                sio_url,
+                transports=["websocket"],
+                socketio_path="/socket.io",
+                sslopt={
+                    "cert_reqs": ssl.CERT_REQUIRED,
+                    "ca_certs": certifi.where()
+                }
+            )
+            sio.wait()
+        except Exception as e2:
+            print("⚠️ Segundo intento falló:", e2)
+            try:
+                # Último recurso: sin validación
+                sio.connect(
+                    sio_url,
+                    transports=["websocket"],
+                    socketio_path="/socket.io",
+                    sslopt={"cert_reqs": ssl.CERT_NONE}
+                )
+                sio.wait()
+            except Exception as e3:
+                print("❌ No se pudo conectar:", e3)
 
 if __name__ == "__main__":
     main()
