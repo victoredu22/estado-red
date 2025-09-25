@@ -59,7 +59,7 @@ def main():
                     actualizar_apartamento(depto["_id"], {
                         "attempts": 0,
                         "status": "true",
-                        "step": "iniciando intento"
+                        "steps": "iniciando intento"
                     })
 
                     try:
@@ -70,7 +70,7 @@ def main():
                             actualizar_apartamento(depto["_id"], {
                                 "attempts": intentosDepto + 1,
                                 "status": "false",
-                                "step": "fallo la url del depto"
+                                "steps": "fallo la url del depto"
                             })
                             print(f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}")
                             navegador.close()
@@ -87,7 +87,7 @@ def main():
                             actualizar_apartamento(depto["_id"], {
                                 "attempts": intentosDepto + 1,
                                 "status": "false",
-                                "step": "fallo credenciales"
+                                "steps": "fallo credenciales"
                             })
                             navegador.close()
                             continue
@@ -106,7 +106,7 @@ def main():
                                 actualizar_apartamento(depto["_id"], {
                                     "attempts": intentosDepto + 1,
                                     "status": "false",
-                                    "step": "credenciales incorrectas login"
+                                    "steps": "credenciales incorrectas login"
                                 })
                             else:
                                 print(f"⚠️ No se encontró la IP. Timeout en {depto['name']}.")
