@@ -58,7 +58,7 @@ def main():
                     # Resetear intentos
                     actualizar_apartamento(depto["_id"], {
                         "attempts": 0,
-                        "status": "true",
+                        "status": True,
                         "steps": "iniciando intento"
                     })
 
@@ -69,7 +69,7 @@ def main():
                             intentosDepto = depto["attempts"]
                             actualizar_apartamento(depto["_id"], {
                                 "attempts": intentosDepto + 1,
-                                "status": "false",
+                                "status": False,
                                 "steps": "fallo la url del depto"
                             })
                             print(f"❌ No se pudo conectar a {depto['name']} ({depto['url']}): {e}")
@@ -86,7 +86,7 @@ def main():
                             intentosDepto = depto["attempts"]
                             actualizar_apartamento(depto["_id"], {
                                 "attempts": intentosDepto + 1,
-                                "status": "false",
+                                "status": False,
                                 "steps": "fallo credenciales"
                             })
                             navegador.close()
@@ -105,7 +105,7 @@ def main():
                                 intentosDepto = depto["attempts"]
                                 actualizar_apartamento(depto["_id"], {
                                     "attempts": intentosDepto + 1,
-                                    "status": "false",
+                                    "status": false,
                                     "steps": "credenciales incorrectas login"
                                 })
                             else:
