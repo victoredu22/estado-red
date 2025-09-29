@@ -97,6 +97,12 @@ def main():
                             if pagina.locator("#lan-info-ip").is_visible():
                                 ip_texto = pagina.locator("#lan-info-ip pre").inner_text()
                                 print(f"✅ IP encontrada en {depto['name']}: {ip_texto}")
+                                intentosDepto = depto["attempts"]
+                                actualizar_apartamento(depto["_id"], {
+                                    "attempts": intentosDepto + 1,
+                                    "status": false,
+                                    "steps": "ningun error en el checkeo"
+                                })
                             else:
                                 print(f"⚠️ Se ingresó, pero no se encontró la IP en {depto['name']}.")
                         except TimeoutError:
