@@ -100,7 +100,7 @@ def main():
                                 intentosDepto = depto["attempts"]
                                 actualizar_apartamento(depto["_id"], {
                                     "attempts": intentosDepto + 1,
-                                    "status": false,
+                                    "status": False,
                                     "steps": "ningun error en el checkeo"
                                 })
                             else:
@@ -111,7 +111,7 @@ def main():
                                 intentosDepto = depto["attempts"]
                                 actualizar_apartamento(depto["_id"], {
                                     "attempts": intentosDepto + 1,
-                                    "status": false,
+                                    "status": False,
                                     "steps": "credenciales incorrectas login"
                                 })
                             else:
