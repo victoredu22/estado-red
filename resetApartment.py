@@ -191,6 +191,39 @@ def main():
                                         boton_si.click()
                                         pagina.wait_for_timeout(2000)
                                         print("✅ Confirmación exitosa - Dispositivo reiniciándose")
+
+                                        # Esperar y monitorear la barra de progreso
+                                        try:
+                                            print("\n📊 Monitoreando barra de progreso de reinicio...")
+                                            barra_progreso = pagina.locator("#configuration-reboot-progress .progressbar-value")
+
+                                            # Esperar hasta que la barra esté visible
+                                            pagina.wait_for_selector("#configuration-reboot-progress", timeout=5000)
+                                            print("   ✅ Barra de progreso visible")
+
+                                            # Monitorear el ancho de la barra cada 5 segundos
+                                            tiempo_total = 0
+                                            while tiempo_total < 120:  # Máximo 2 minutos
+                                                try:
+                                                    ancho = barra_progreso.evaluate("el => el.style.width")
+                                                    print(f"   📊 Progreso: {ancho}")
+
+                                                    # Si la barra desaparece o el modal se cierra, terminó
+                                                    if not barra_progreso.is_visible():
+                                                        print("   ✅ Barra de progreso completada!")
+                                                        break
+                                                except:
+                                                    print("   ✅ Reinicio completado - modal cerrado")
+                                                    break
+
+                                                pagina.wait_for_timeout(5000)
+                                                tiempo_total += 5
+
+                                            if tiempo_total >= 120:
+                                                print("   ⏰ Tiempo máximo de espera alcanzado (2 minutos)")
+                                        except Exception as e:
+                                            print(f"   ⚠️ No se pudo monitorear la barra de progreso: {e}")
+
                                     else:
                                         print("❌ El botón 'Sí' no está visible")
                                 except Exception as e:
