@@ -142,12 +142,12 @@ def main():
                     # Cambiar el texto de los botones para identificarlos
                     if len(botones_reiniciar) >= 1:
                         print("📝 Cambiando texto de botones para identificación...")
-                        botones_reiniciar[0][1].evaluate("el => el.textContent = 'BOTON 1'")
-                        print("   ✅ Primer botón cambiado a 'BOTON 1'")
+                        botones_reiniciar[0][1].evaluate("el => el.textContent = 'Reinicio Fabrica'")
+                        print("   ✅ Primer botón cambiado a 'Reinicio Fabrica'")
 
                     if len(botones_reiniciar) >= 2:
-                        botones_reiniciar[1][1].evaluate("el => el.textContent = 'BOTON 2'")
-                        print("   ✅ Segundo botón cambiado a 'BOTON 2'")
+                        botones_reiniciar[1][1].evaluate("el => el.textContent = 'Reinicio Dispositivo'")
+                        print("   ✅ Segundo botón cambiado a 'Reinicio Dispositivo'")
 
                     print("\n⏸️  Revisa visualmente los botones en el navegador")
                     print("   BOTON 1 = Restablecer a los Ajustes Predeterminados de Fábrica")
