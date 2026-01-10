@@ -12,8 +12,8 @@ load_dotenv()  # Carga las variables del archivo .env
 
 api_url = os.getenv('API_APARTMENTS_URL') 
 
-sio = socketio.Client()
-sio_url = os.getenv('SERVER_SOCKET')
+# sio = socketio.Client()
+# sio_url = os.getenv('SERVER_SOCKET')
 
 def obtener_apartamentos():
     try:
