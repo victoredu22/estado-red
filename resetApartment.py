@@ -46,25 +46,25 @@ def main():
         print("Uso: python resetApartment.py <numero_departamento>")
         return
 
-    numero_depto = sys.argv[1]
-    print(f"🔍 Buscando departamento #{numero_depto}...")
+    id_depto = int(sys.argv[1])
+    print(f"🔍 Buscando departamento con id: {id_depto}...")
 
     try:
         apartamentos = obtener_apartamentos()
 
-        # Buscar el departamento específico por su número
+        # Buscar el departamento específico por su id
         depto_encontrado = None
         for depto in apartamentos:
-            if str(depto.get("number")) == str(numero_depto):
+            if depto.get("id") == id_depto:
                 depto_encontrado = depto
                 break
 
         if not depto_encontrado:
-            print(f"❌ No se encontró el departamento #{numero_depto}")
+            print(f"❌ No se encontró el departamento con id: {id_depto}")
             return
 
         if not depto_encontrado.get("active"):
-            print(f"⚠️ El departamento #{numero_depto} ({depto_encontrado['name']}) no está activo")
+            print(f"⚠️ El departamento {depto_encontrado['name']} (id: {id_depto}) no está activo")
             return
 
         print(f"✅ Departamento encontrado: {depto_encontrado['name']}")
@@ -74,23 +74,10 @@ def main():
             contexto = navegador.new_context(ignore_https_errors=True)
             pagina = contexto.new_page()
 
-            # Resetear intentos
-            actualizar_apartamento(depto_encontrado["_id"], {
-                "attempts": 0,
-                "status": True,
-                "steps": "iniciando reset manual"
-            })
-
             try:
                 try:
                     pagina.goto(depto_encontrado["url"])
                 except Exception as e:
-                    intentosDepto = depto_encontrado["attempts"]
-                    actualizar_apartamento(depto_encontrado["_id"], {
-                        "attempts": intentosDepto + 1,
-                        "status": False,
-                        "steps": "fallo la url del depto"
-                    })
                     print(f"❌ No se pudo conectar a {depto_encontrado['name']} ({depto_encontrado['url']}): {e}")
                     navegador.close()
                     return
@@ -102,12 +89,6 @@ def main():
                     pagina.locator("text=Acceder").nth(1).click()
                 except Exception as e:
                     print(f"❌ No se pudo hacer clic en Acceder en {depto_encontrado['name']}: {e}")
-                    intentosDepto = depto_encontrado["attempts"]
-                    actualizar_apartamento(depto_encontrado["_id"], {
-                        "attempts": intentosDepto + 1,
-                        "status": False,
-                        "steps": "fallo credenciales"
-                    })
                     navegador.close()
                     return
 
@@ -116,23 +97,11 @@ def main():
                     if pagina.locator("#lan-info-ip").is_visible():
                         ip_texto = pagina.locator("#lan-info-ip pre").inner_text()
                         print(f"✅ IP encontrada en {depto_encontrado['name']}: {ip_texto}")
-                        intentosDepto = depto_encontrado["attempts"]
-                        actualizar_apartamento(depto_encontrado["_id"], {
-                            "attempts": intentosDepto + 1,
-                            "status": False,
-                            "steps": "ningun error en el checkeo"
-                        })
                     else:
                         print(f"❌ Se ingresó, pero no se encontró la IP en {depto_encontrado['name']}.")
                 except TimeoutError:
                     if pagina.url.endswith("/login") or "login" in pagina.title().lower():
                         print(f"⚠️ Credenciales incorrectas para {depto_encontrado['name']}.")
-                        intentosDepto = depto_encontrado["attempts"]
-                        actualizar_apartamento(depto_encontrado["_id"], {
-                            "attempts": intentosDepto + 1,
-                            "status": False,
-                            "steps": "credenciales incorrectas login"
-                        })
                     else:
                         print(f"❌ No se encontró la IP. Timeout en {depto_encontrado['name']}.")
                 pagina.wait_for_timeout(3000)
