@@ -92,18 +92,28 @@ def main():
                     navegador.close()
                     return
 
+                # Esperar a que cargue la página después del login
+                pagina.wait_for_timeout(2000)
+
+                # Verificar si el login fue exitoso
+                if pagina.url.endswith("/login") or "login" in pagina.title().lower():
+                    print(f"⚠️ Credenciales incorrectas para {depto_encontrado['name']}.")
+                    navegador.close()
+                    return
+
+                print(f"✅ Login exitoso en {depto_encontrado['name']}")
+
+                # Navegar a la sección SISTEMA
                 try:
-                    pagina.wait_for_selector("#lan-info-ip", timeout=5000)
-                    if pagina.locator("#lan-info-ip").is_visible():
-                        ip_texto = pagina.locator("#lan-info-ip pre").inner_text()
-                        print(f"✅ IP encontrada en {depto_encontrado['name']}: {ip_texto}")
-                    else:
-                        print(f"❌ Se ingresó, pero no se encontró la IP en {depto_encontrado['name']}.")
-                except TimeoutError:
-                    if pagina.url.endswith("/login") or "login" in pagina.title().lower():
-                        print(f"⚠️ Credenciales incorrectas para {depto_encontrado['name']}.")
-                    else:
-                        print(f"❌ No se encontró la IP. Timeout en {depto_encontrado['name']}.")
+                    print("🔧 Navegando a SISTEMA...")
+                    pagina.locator("text=SISTEMA").click()
+                    pagina.wait_for_timeout(2000)
+                    print("✅ Navegación a SISTEMA completada")
+                except Exception as e:
+                    print(f"❌ Error al navegar a SISTEMA: {e}")
+                    navegador.close()
+                    return
+
                 pagina.wait_for_timeout(3000)
 
             finally:
