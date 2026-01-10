@@ -107,10 +107,21 @@ def main():
                 try:
                     print("🔧 Navegando a SISTEMA...")
                     pagina.locator("span.sub-navigator-text:has-text('SISTEMA')").click()
-                    pagina.wait_for_timeout(15000)
+                    pagina.wait_for_timeout(3000)
                     print("✅ Navegación a SISTEMA completada")
                 except Exception as e:
                     print(f"❌ Error al navegar a SISTEMA: {e}")
+                    navegador.close()
+                    return
+
+                # Hacer clic en el botón Reiniciar
+                try:
+                    print("🔄 Haciendo clic en Reiniciar...")
+                    pagina.locator("button:has-text('Reiniciar')").click()
+                    pagina.wait_for_timeout(2000)
+                    print("✅ Clic en Reiniciar exitoso")
+                except Exception as e:
+                    print(f"❌ Error al hacer clic en Reiniciar: {e}")
                     navegador.close()
                     return
 
