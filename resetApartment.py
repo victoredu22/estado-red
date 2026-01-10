@@ -182,25 +182,17 @@ def main():
                                 print("🔄 Haciendo clic en 'Sí' para confirmar...")
 
                                 try:
-                                    # Buscar todos los botones en el modal y encontrar el que dice "Sí"
-                                    print("   Buscando todos los botones en el modal...")
-                                    botones_modal = pagina.locator("a.button-button").all()
+                                    # Usar el ID específico del botón "Sí"
+                                    print("   Buscando botón 'Sí' por ID...")
+                                    boton_si = pagina.locator("#configuration-reboot-confirm-btn-ok a.button-button")
 
-                                    boton_si = None
-                                    for i, btn in enumerate(botones_modal):
-                                        texto = btn.inner_text().strip()
-                                        print(f"      Botón modal {i}: '{texto}'")
-                                        if texto == "Sí":
-                                            boton_si = btn
-                                            print(f"   ✅ Encontrado botón 'Sí' en índice {i}")
-                                            break
-
-                                    if boton_si:
+                                    if boton_si.is_visible():
+                                        print("   ✅ Encontrado botón 'Sí' por ID")
                                         boton_si.click()
                                         pagina.wait_for_timeout(2000)
                                         print("✅ Confirmación exitosa - Dispositivo reiniciándose")
                                     else:
-                                        print("❌ No se encontró el botón 'Sí'")
+                                        print("❌ El botón 'Sí' no está visible")
                                 except Exception as e:
                                     print(f"❌ Error al hacer clic en 'Sí': {e}")
                             else:
