@@ -122,16 +122,25 @@ def main():
                 except Exception as e:
                     print(f"⚠️ No se pudo hacer scroll: {e}")
 
-                # Hacer clic en el botón Reinicializar Dispositivo
+                # Hacer clic en el botón Reiniciar de la sección Reinicializar Dispositivo
                 try:
-                    print("🔄 Haciendo clic en Reinicializar Dispositivo...")
-                    pagina.locator("text=Reinicializar Dispositivo").click()
+                    print("🔄 Haciendo clic en botón Reiniciar (Reinicializar Dispositivo)...")
+                    # Buscar la fila que contiene "Reinicializar Dispositivo" y hacer clic en su botón "Reiniciar"
+                    pagina.locator("text=Reinicializar Dispositivo").locator("..").locator("button:has-text('Reiniciar')").click()
                     pagina.wait_for_timeout(2000)
-                    print("✅ Clic en Reinicializar Dispositivo exitoso")
+                    print("✅ Clic en Reiniciar exitoso")
                 except Exception as e:
-                    print(f"❌ Error al hacer clic en Reinicializar Dispositivo: {e}")
-                    navegador.close()
-                    return
+                    print(f"❌ Error al hacer clic en Reiniciar: {e}")
+                    # Intentar método alternativo
+                    try:
+                        print("🔄 Intentando método alternativo...")
+                        pagina.locator("button:has-text('Reiniciar')").nth(1).click()
+                        pagina.wait_for_timeout(2000)
+                        print("✅ Clic en Reiniciar exitoso (método alternativo)")
+                    except Exception as e2:
+                        print(f"❌ Error en método alternativo: {e2}")
+                        navegador.close()
+                        return
 
                 pagina.wait_for_timeout(15000)
 
