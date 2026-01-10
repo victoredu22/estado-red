@@ -182,7 +182,20 @@ def main():
                                 print("🔄 Haciendo clic en 'Sí' para confirmar...")
 
                                 try:
-                                    pagina.locator("button:has-text('Sí')").click()
+                                    # Buscar el botón "Sí" (puede ser <button> o <a>)
+                                    boton_si = None
+                                    try:
+                                        boton_si = pagina.locator("a.button-button:has-text('Sí')").first
+                                        if boton_si.is_visible():
+                                            print("   Encontrado botón 'Sí' como enlace <a>")
+                                    except:
+                                        pass
+
+                                    if not boton_si:
+                                        boton_si = pagina.locator("button:has-text('Sí')").first
+                                        print("   Encontrado botón 'Sí' como <button>")
+
+                                    boton_si.click()
                                     pagina.wait_for_timeout(2000)
                                     print("✅ Confirmación exitosa - Dispositivo reiniciándose")
                                 except Exception as e:
