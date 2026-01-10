@@ -139,36 +139,15 @@ def main():
 
                     print(f"   Botones con 'Reiniciar': {len(botones_reiniciar)}")
 
-                    # Hacer clic en el segundo botón "Reiniciar" (Reinicializar Dispositivo)
+                    # SOLO mostrar información, NO hacer clic todavía
                     if len(botones_reiniciar) >= 2:
-                        print(f"🔄 Haciendo clic en botón Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})...")
-                        botones_reiniciar[1][1].click()
-                        pagina.wait_for_timeout(2000)
-                        print("✅ Clic en Reinicializar Dispositivo exitoso")
+                        print(f"\n📋 Se encontró el botón Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})")
+                        print("⏸️  El script está pausado. NO se hará clic automáticamente.")
+                        print("   Revisa el navegador para ver los botones")
 
-                        # Confirmar el diálogo de reinicio
-                        try:
-                            print("⚠️ Buscando diálogo de confirmación...")
-                            # Esperar a que aparezca el diálogo
-                            pagina.wait_for_selector("text=¿Está seguro de reinicializar?", timeout=5000)
-
-                            # Verificar el texto completo del diálogo
-                            texto_dialogo = pagina.locator("text=¿Está seguro de reinicializar?").inner_text()
-                            print(f"✅ Diálogo encontrado: '{texto_dialogo}'")
-
-                            # Verificar que contenga "reinicializar"
-                            if "reinicializar" in texto_dialogo.lower():
-                                print("✅ Confirmado: El diálogo es de REINICIALIZAR (no de restablecer)")
-                                # Hacer clic en el botón "Sí"
-                                print("🔄 Haciendo clic en 'Sí' para confirmar...")
-                                pagina.locator("button:has-text('Sí')").click()
-                                pagina.wait_for_timeout(2000)
-                                print("✅ Confirmación exitosa - Dispositivo reiniciándose")
-                            else:
-                                print("❌ ADVERTENCIA: El diálogo NO contiene 'reinicializar' - NO se hará clic")
-                                print(f"   Texto del diálogo: {texto_dialogo}")
-                        except Exception as e:
-                            print(f"❌ Error al confirmar el diálogo: {e}")
+                        # Esperar 30 segundos para que revises
+                        pagina.wait_for_timeout(30000)
+                        print("\n⏰ Tiempo de espera finalizado")
                     else:
                         print("❌ No se encontraron suficientes botones 'Reiniciar'")
 
