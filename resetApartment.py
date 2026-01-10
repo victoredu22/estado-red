@@ -114,14 +114,22 @@ def main():
                     navegador.close()
                     return
 
-                # Hacer clic en el botón Reiniciar
+                # Hacer scroll hacia abajo para encontrar el botón
                 try:
-                    print("🔄 Haciendo clic en Reiniciar...")
-                    pagina.locator("button:has-text('Reiniciar')").click()
-                    pagina.wait_for_timeout(2000)
-                    print("✅ Clic en Reiniciar exitoso")
+                    print("📜 Haciendo scroll hacia el botón Reinicializar...")
+                    pagina.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    pagina.wait_for_timeout(1000)
                 except Exception as e:
-                    print(f"❌ Error al hacer clic en Reiniciar: {e}")
+                    print(f"⚠️ No se pudo hacer scroll: {e}")
+
+                # Hacer clic en el botón Reinicializar Dispositivo
+                try:
+                    print("🔄 Haciendo clic en Reinicializar Dispositivo...")
+                    pagina.locator("text=Reinicializar Dispositivo").click()
+                    pagina.wait_for_timeout(2000)
+                    print("✅ Clic en Reinicializar Dispositivo exitoso")
+                except Exception as e:
+                    print(f"❌ Error al hacer clic en Reinicializar Dispositivo: {e}")
                     navegador.close()
                     return
 
