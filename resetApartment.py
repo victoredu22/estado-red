@@ -139,22 +139,38 @@ def main():
 
                     print(f"   Botones con 'Reiniciar': {len(botones_reiniciar)}")
 
-                    # Cambiar el texto de los botones para identificarlos
-                    if len(botones_reiniciar) >= 1:
-                        print("📝 Cambiando texto de botones para identificación...")
-                        botones_reiniciar[0][1].evaluate("el => el.textContent = 'Reinicio Fabrica'")
-                        print("   ✅ Primer botón cambiado a 'Reinicio Fabrica'")
-
+                    # Hacer clic en el segundo botón "Reiniciar" (Reinicializar Dispositivo)
                     if len(botones_reiniciar) >= 2:
-                        botones_reiniciar[1][1].evaluate("el => el.textContent = 'Reinicio Dispositivo'")
-                        print("   ✅ Segundo botón cambiado a 'Reinicio Dispositivo'")
+                        print(f"🔄 Haciendo clic en botón Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})...")
+                        botones_reiniciar[1][1].click()
+                        pagina.wait_for_timeout(2000)
+                        print("✅ Clic en Reinicializar Dispositivo exitoso")
 
-                    print("\n⏸️  Revisa visualmente los botones en el navegador")
-                    print("   BOTON 1 = Restablecer a los Ajustes Predeterminados de Fábrica")
-                    print("   BOTON 2 = Reinicializar Dispositivo")
+                        # Confirmar el diálogo de reinicio
+                        try:
+                            print("⚠️ Buscando diálogo de confirmación...")
+                            # Esperar a que aparezca el diálogo
+                            pagina.wait_for_selector("text=¿Está seguro de reinicializar?", timeout=5000)
 
-                    # Esperar para que puedas verlos
-                    pagina.wait_for_timeout(30000)
+                            # Verificar el texto completo del diálogo
+                            texto_dialogo = pagina.locator("text=¿Está seguro de reinicializar?").inner_text()
+                            print(f"✅ Diálogo encontrado: '{texto_dialogo}'")
+
+                            # Verificar que contenga "reinicializar"
+                            if "reinicializar" in texto_dialogo.lower():
+                                print("✅ Confirmado: El diálogo es de REINICIALIZAR (no de restablecer)")
+                                # Hacer clic en el botón "Sí"
+                                print("🔄 Haciendo clic en 'Sí' para confirmar...")
+                                pagina.locator("button:has-text('Sí')").click()
+                                pagina.wait_for_timeout(2000)
+                                print("✅ Confirmación exitosa - Dispositivo reiniciándose")
+                            else:
+                                print("❌ ADVERTENCIA: El diálogo NO contiene 'reinicializar' - NO se hará clic")
+                                print(f"   Texto del diálogo: {texto_dialogo}")
+                        except Exception as e:
+                            print(f"❌ Error al confirmar el diálogo: {e}")
+                    else:
+                        print("❌ No se encontraron suficientes botones 'Reiniciar'")
 
                 except Exception as e:
                     print(f"❌ Error al identificar botones: {e}")
