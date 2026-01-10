@@ -124,9 +124,9 @@ def main():
 
                 # Hacer clic en el botón Reiniciar de la sección Reinicializar Dispositivo
                 try:
-                    print("🔄 Buscando todos los botones en la página...")
-                    # Primero, listar todos los botones para debugging
-                    botones = pagina.locator("button").all()
+                    print("🔄 Buscando botones tipo enlace con clase 'button-button'...")
+                    # Los botones son enlaces <a> con clase button-button
+                    botones = pagina.locator("a.button-button").all()
                     print(f"   Total de botones encontrados: {len(botones)}")
 
                     # Buscar específicamente botones que contengan "Reiniciar"
@@ -134,7 +134,7 @@ def main():
                     for i, boton in enumerate(botones):
                         texto = boton.inner_text()
                         print(f"   Botón {i}: '{texto}'")
-                        if "Reiniciar" in texto or "Reiniciar" in texto:
+                        if "Reiniciar" in texto:
                             botones_reiniciar.append((i, boton))
 
                     print(f"   Botones con 'Reiniciar': {len(botones_reiniciar)}")
