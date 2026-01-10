@@ -124,17 +124,23 @@ def main():
 
                 # Hacer clic en el botón Reiniciar de la sección Reinicializar Dispositivo
                 try:
-                    print("🔄 Haciendo clic en botón Reiniciar (Reinicializar Dispositivo)...")
-                    # Buscar la fila que contiene "Reinicializar Dispositivo" y hacer clic en su botón "Reiniciar"
-                    pagina.locator("text=Reinicializar Dispositivo").locator("..").locator("button:has-text('Reiniciar')").click()
+                    print("🔄 Buscando botón Reiniciar junto a 'Reinicializar Dispositivo'...")
+                    # Usar XPath para encontrar el botón que está en la misma fila que "Reinicializar Dispositivo"
+                    pagina.locator("xpath=//tr[contains(., 'Reinicializar Dispositivo')]//button[contains(text(), 'Reiniciar')]").click()
                     pagina.wait_for_timeout(2000)
                     print("✅ Clic en Reiniciar exitoso")
                 except Exception as e:
-                    print(f"❌ Error al hacer clic en Reiniciar: {e}")
-                    # Intentar método alternativo
+                    print(f"❌ Error con XPath: {e}")
+                    # Intentar con CSS selector alternativo
                     try:
-                        print("🔄 Intentando método alternativo...")
-                        pagina.locator("button:has-text('Reiniciar')").nth(1).click()
+                        print("🔄 Intentando con selector CSS alternativo...")
+                        # Buscar todos los botones Reiniciar y elegir el correcto
+                        botones = pagina.locator("button:has-text('Reiniciar')").all()
+                        print(f"   Encontrados {len(botones)} botones 'Reiniciar'")
+                        if len(botones) > 1:
+                            botones[1].click()  # El segundo botón debería ser el de Reinicializar Dispositivo
+                        else:
+                            botones[0].click()
                         pagina.wait_for_timeout(2000)
                         print("✅ Clic en Reiniciar exitoso (método alternativo)")
                     except Exception as e2:
