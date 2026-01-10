@@ -210,7 +210,7 @@ def main():
                     navegador.close()
                     return
 
-                pagina.wait_for_timeout(15000)
+                pagina.wait_for_timeout(60000)
 
             finally:
                 navegador.close()
