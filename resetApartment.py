@@ -139,15 +139,55 @@ def main():
 
                     print(f"   Botones con 'Reiniciar': {len(botones_reiniciar)}")
 
-                    # SOLO mostrar información, NO hacer clic todavía
+                    # Hacer clic en el segundo botón "Reiniciar" (Reinicializar Dispositivo)
                     if len(botones_reiniciar) >= 2:
-                        print(f"\n📋 Se encontró el botón Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})")
-                        print("⏸️  El script está pausado. NO se hará clic automáticamente.")
-                        print("   Revisa el navegador para ver los botones")
+                        print(f"\n🔄 Haciendo clic en botón Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})...")
+                        botones_reiniciar[1][1].click()
+                        pagina.wait_for_timeout(2000)
+                        print("✅ Clic en Reinicializar Dispositivo exitoso")
 
-                        # Esperar 30 segundos para que revises
-                        pagina.wait_for_timeout(30000)
-                        print("\n⏰ Tiempo de espera finalizado")
+                        # Buscar el modal de confirmación
+                        try:
+                            print("\n🔍 Buscando modal de confirmación...")
+
+                            # Buscar si existe un elemento con texto "Configuración"
+                            tiene_configuracion = False
+                            tiene_reinicializar = False
+
+                            try:
+                                configuracion = pagina.locator("text=Configuración").first
+                                if configuracion.is_visible():
+                                    tiene_configuracion = True
+                                    print("✅ Se encontró 'Configuración' en el modal")
+                            except:
+                                print("❌ NO se encontró 'Configuración' en el modal")
+
+                            # Buscar si existe un elemento con texto "reinicializar"
+                            try:
+                                reinicializar = pagina.locator("text=/reinicializar/i").first
+                                if reinicializar.is_visible():
+                                    tiene_reinicializar = True
+                                    texto_completo = reinicializar.inner_text()
+                                    print(f"✅ Se encontró 'reinicializar': '{texto_completo}'")
+                            except:
+                                print("❌ NO se encontró 'reinicializar' en el modal")
+
+                            # Resumen
+                            print(f"\n📊 Resumen del modal:")
+                            print(f"   - Contiene 'Configuración': {tiene_configuracion}")
+                            print(f"   - Contiene 'reinicializar': {tiene_reinicializar}")
+
+                            if tiene_configuracion and tiene_reinicializar:
+                                print("✅ ¡Modal correcto! Contiene 'Configuración' y 'reinicializar'")
+                            else:
+                                print("⚠️ Modal NO contiene los textos esperados")
+
+                            # Esperar para que veas el modal
+                            print("\n⏸️ Esperando 30 segundos para que veas el modal...")
+                            pagina.wait_for_timeout(30000)
+
+                        except Exception as e:
+                            print(f"❌ Error al buscar modal: {e}")
                     else:
                         print("❌ No se encontraron suficientes botones 'Reiniciar'")
 
