@@ -107,14 +107,14 @@ def main():
                 try:
                     print("🔧 Navegando a SISTEMA...")
                     pagina.locator("text=SISTEMA").click()
-                    pagina.wait_for_timeout(2000)
+                    pagina.wait_for_timeout(15000)
                     print("✅ Navegación a SISTEMA completada")
                 except Exception as e:
                     print(f"❌ Error al navegar a SISTEMA: {e}")
                     navegador.close()
                     return
 
-                pagina.wait_for_timeout(3000)
+                pagina.wait_for_timeout(15000)
 
             finally:
                 navegador.close()
