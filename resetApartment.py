@@ -106,7 +106,7 @@ def main():
                 # Navegar a la sección SISTEMA
                 try:
                     print("🔧 Navegando a SISTEMA...")
-                    pagina.locator("text=SISTEMA").click()
+                    pagina.locator("span.sub-navigator-text:has-text('SISTEMA')").click()
                     pagina.wait_for_timeout(15000)
                     print("✅ Navegación a SISTEMA completada")
                 except Exception as e:
