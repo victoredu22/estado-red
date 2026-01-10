@@ -122,7 +122,7 @@ def main():
                 except Exception as e:
                     print(f"⚠️ No se pudo hacer scroll: {e}")
 
-                # Hacer clic en el botón Reiniciar de la sección Reinicializar Dispositivo
+                # Identificar y marcar los botones Reiniciar
                 try:
                     print("🔄 Buscando botones tipo enlace con clase 'button-button'...")
                     # Los botones son enlaces <a> con clase button-button
@@ -139,23 +139,25 @@ def main():
 
                     print(f"   Botones con 'Reiniciar': {len(botones_reiniciar)}")
 
-                    # Hacer clic en el segundo botón "Reiniciar" (índice 1)
+                    # Cambiar el texto de los botones para identificarlos
+                    if len(botones_reiniciar) >= 1:
+                        print("📝 Cambiando texto de botones para identificación...")
+                        botones_reiniciar[0][1].evaluate("el => el.textContent = 'BOTON 1'")
+                        print("   ✅ Primer botón cambiado a 'BOTON 1'")
+
                     if len(botones_reiniciar) >= 2:
-                        print(f"🔄 Haciendo clic en el botón de Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})...")
-                        botones_reiniciar[1][1].click()
-                        pagina.wait_for_timeout(2000)
-                        print("✅ Clic en Reiniciar exitoso")
-                    elif len(botones_reiniciar) == 1:
-                        print(f"⚠️ Solo se encontró 1 botón Reiniciar, haciendo clic en él...")
-                        botones_reiniciar[0][1].click()
-                        pagina.wait_for_timeout(2000)
-                        print("✅ Clic en Reiniciar exitoso")
-                    else:
-                        print("❌ No se encontró ningún botón con 'Reiniciar'")
-                        navegador.close()
-                        return
+                        botones_reiniciar[1][1].evaluate("el => el.textContent = 'BOTON 2'")
+                        print("   ✅ Segundo botón cambiado a 'BOTON 2'")
+
+                    print("\n⏸️  Revisa visualmente los botones en el navegador")
+                    print("   BOTON 1 = Restablecer a los Ajustes Predeterminados de Fábrica")
+                    print("   BOTON 2 = Reinicializar Dispositivo")
+
+                    # Esperar para que puedas verlos
+                    pagina.wait_for_timeout(30000)
+
                 except Exception as e:
-                    print(f"❌ Error al hacer clic en Reiniciar: {e}")
+                    print(f"❌ Error al identificar botones: {e}")
                     navegador.close()
                     return
 
