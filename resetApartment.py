@@ -182,22 +182,25 @@ def main():
                                 print("🔄 Haciendo clic en 'Sí' para confirmar...")
 
                                 try:
-                                    # Buscar el botón "Sí" (puede ser <button> o <a>)
+                                    # Buscar todos los botones en el modal y encontrar el que dice "Sí"
+                                    print("   Buscando todos los botones en el modal...")
+                                    botones_modal = pagina.locator("a.button-button").all()
+
                                     boton_si = None
-                                    try:
-                                        boton_si = pagina.locator("a.button-button:has-text('Sí')").first
-                                        if boton_si.is_visible():
-                                            print("   Encontrado botón 'Sí' como enlace <a>")
-                                    except:
-                                        pass
+                                    for i, btn in enumerate(botones_modal):
+                                        texto = btn.inner_text().strip()
+                                        print(f"      Botón modal {i}: '{texto}'")
+                                        if texto == "Sí":
+                                            boton_si = btn
+                                            print(f"   ✅ Encontrado botón 'Sí' en índice {i}")
+                                            break
 
-                                    if not boton_si:
-                                        boton_si = pagina.locator("button:has-text('Sí')").first
-                                        print("   Encontrado botón 'Sí' como <button>")
-
-                                    boton_si.click()
-                                    pagina.wait_for_timeout(2000)
-                                    print("✅ Confirmación exitosa - Dispositivo reiniciándose")
+                                    if boton_si:
+                                        boton_si.click()
+                                        pagina.wait_for_timeout(2000)
+                                        print("✅ Confirmación exitosa - Dispositivo reiniciándose")
+                                    else:
+                                        print("❌ No se encontró el botón 'Sí'")
                                 except Exception as e:
                                     print(f"❌ Error al hacer clic en 'Sí': {e}")
                             else:
