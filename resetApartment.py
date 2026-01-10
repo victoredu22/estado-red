@@ -177,14 +177,20 @@ def main():
                             print(f"   - Contiene 'Configuración': {tiene_configuracion}")
                             print(f"   - Contiene 'reinicializar': {tiene_reinicializar}")
 
-                            if tiene_configuracion and tiene_reinicializar:
-                                print("✅ ¡Modal correcto! Contiene 'Configuración' y 'reinicializar'")
-                            else:
-                                print("⚠️ Modal NO contiene los textos esperados")
+                            if tiene_reinicializar:
+                                print("✅ ¡Modal correcto! Contiene 'reinicializar'")
+                                print("🔄 Haciendo clic en 'Sí' para confirmar...")
 
-                            # Esperar para que veas el modal
-                            print("\n⏸️ Esperando 30 segundos para que veas el modal...")
-                            pagina.wait_for_timeout(30000)
+                                try:
+                                    pagina.locator("button:has-text('Sí')").click()
+                                    pagina.wait_for_timeout(2000)
+                                    print("✅ Confirmación exitosa - Dispositivo reiniciándose")
+                                except Exception as e:
+                                    print(f"❌ Error al hacer clic en 'Sí': {e}")
+                            else:
+                                print("⚠️ Modal NO contiene 'reinicializar' - NO se hará clic en 'Sí'")
+                                print("⏸️ Esperando 30 segundos para que veas el modal...")
+                                pagina.wait_for_timeout(30000)
 
                         except Exception as e:
                             print(f"❌ Error al buscar modal: {e}")
