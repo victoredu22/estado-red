@@ -221,8 +221,14 @@ def main():
 
                                             if tiempo_total >= 120:
                                                 print("   ⏰ Tiempo máximo de espera alcanzado (2 minutos)")
+
+                                            # Proceso completado, terminar sin esperar más
+                                            print("\n🎉 Proceso de reinicio completado exitosamente")
+                                            return
                                         except Exception as e:
                                             print(f"   ⚠️ No se pudo monitorear la barra de progreso: {e}")
+                                            print("\n🎉 Proceso completado")
+                                            return
 
                                     else:
                                         print("❌ El botón 'Sí' no está visible")
