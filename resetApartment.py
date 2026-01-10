@@ -124,29 +124,40 @@ def main():
 
                 # Hacer clic en el botón Reiniciar de la sección Reinicializar Dispositivo
                 try:
-                    print("🔄 Buscando botón Reiniciar junto a 'Reinicializar Dispositivo'...")
-                    # Usar XPath para encontrar el botón que está en la misma fila que "Reinicializar Dispositivo"
-                    pagina.locator("xpath=//tr[contains(., 'Reinicializar Dispositivo')]//button[contains(text(), 'Reiniciar')]").click()
-                    pagina.wait_for_timeout(2000)
-                    print("✅ Clic en Reiniciar exitoso")
-                except Exception as e:
-                    print(f"❌ Error con XPath: {e}")
-                    # Intentar con CSS selector alternativo
-                    try:
-                        print("🔄 Intentando con selector CSS alternativo...")
-                        # Buscar todos los botones Reiniciar y elegir el correcto
-                        botones = pagina.locator("button:has-text('Reiniciar')").all()
-                        print(f"   Encontrados {len(botones)} botones 'Reiniciar'")
-                        if len(botones) > 1:
-                            botones[1].click()  # El segundo botón debería ser el de Reinicializar Dispositivo
-                        else:
-                            botones[0].click()
+                    print("🔄 Buscando todos los botones en la página...")
+                    # Primero, listar todos los botones para debugging
+                    botones = pagina.locator("button").all()
+                    print(f"   Total de botones encontrados: {len(botones)}")
+
+                    # Buscar específicamente botones que contengan "Reiniciar"
+                    botones_reiniciar = []
+                    for i, boton in enumerate(botones):
+                        texto = boton.inner_text()
+                        print(f"   Botón {i}: '{texto}'")
+                        if "Reiniciar" in texto or "Reiniciar" in texto:
+                            botones_reiniciar.append((i, boton))
+
+                    print(f"   Botones con 'Reiniciar': {len(botones_reiniciar)}")
+
+                    # Hacer clic en el segundo botón "Reiniciar" (índice 1)
+                    if len(botones_reiniciar) >= 2:
+                        print(f"🔄 Haciendo clic en el botón de Reinicializar Dispositivo (índice {botones_reiniciar[1][0]})...")
+                        botones_reiniciar[1][1].click()
                         pagina.wait_for_timeout(2000)
-                        print("✅ Clic en Reiniciar exitoso (método alternativo)")
-                    except Exception as e2:
-                        print(f"❌ Error en método alternativo: {e2}")
+                        print("✅ Clic en Reiniciar exitoso")
+                    elif len(botones_reiniciar) == 1:
+                        print(f"⚠️ Solo se encontró 1 botón Reiniciar, haciendo clic en él...")
+                        botones_reiniciar[0][1].click()
+                        pagina.wait_for_timeout(2000)
+                        print("✅ Clic en Reiniciar exitoso")
+                    else:
+                        print("❌ No se encontró ningún botón con 'Reiniciar'")
                         navegador.close()
                         return
+                except Exception as e:
+                    print(f"❌ Error al hacer clic en Reiniciar: {e}")
+                    navegador.close()
+                    return
 
                 pagina.wait_for_timeout(15000)
 
