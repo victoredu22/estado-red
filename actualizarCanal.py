@@ -120,31 +120,29 @@ def main():
                             pagina.wait_for_timeout(2000)
                         
                         # Extraer Canal/Frecuencia
-                        # Buscamos por texto "Canal/Frecuencia"
                         print("   🔍 Extrayendo Canal/Frecuencia...")
                         
-                        # Estrategia: Buscar el elemento que contiene el texto y obtener el siguiente o el valor en la misma fila
-                        # Según el usuario: "dice canal/fecuencia y despues el valor"
-                        texto_completo = pagina.content()
-                        
-                        # Usar regex o locators para encontrar el valor
-                        # Ejemplo: Canal/Frecuencia : 1 (2412 MHz)
-                        match = re.search(r"Canal/Frecuencia\s*[:]\s*([\w\s\(\)]+)", texto_completo)
-                        
+                        # Usar el selector específico indicado por el usuario
                         canal_valor = "No encontrado"
-                        if match:
-                            canal_valor = match.group(1).strip()
-                            # Limpiar un poco si hay saltos de línea o muchos espacios
-                            canal_valor = " ".join(canal_valor.split())
-                        else:
-                            # Intentar buscar en la tabla si existe
-                            try:
-                                # Buscar el TD que contiene el texto y obtener el siguiente TD
-                                canal_label = pagina.locator("td:has-text('Canal/Frecuencia')")
+                        try:
+                            # Según el DOM proporcionado: #wireless-info-channel
+                            # El valor real suele estar dentro de .text-wrap-outer dentro del widget
+                            selector_canal = "#wireless-info-channel .text-wrap-outer"
+                            if pagina.locator(selector_canal).is_visible():
+                                canal_valor = pagina.locator(selector_canal).inner_text().strip()
+                            else:
+                                # Fallback al widget completo o búsqueda por texto
+                                canal_label = pagina.locator("#wireless-info-channel")
                                 if canal_label.is_visible():
-                                    canal_valor = pagina.locator("td:has-text('Canal/Frecuencia') + td").inner_text()
-                            except:
-                                pass
+                                    canal_valor = canal_label.inner_text().replace("Canal/Frecuencia", "").replace(":", "").strip()
+                        except Exception as e:
+                            print(f"   ⚠️ Fallo selector específico: {e}. Probando Regex...")
+                            # Fallback a Regex
+                            texto_completo = pagina.content()
+                            match = re.search(r"Canal/Frecuencia\s*[:]\s*([\w\s\(\)]+)", texto_completo)
+                            if match:
+                                canal_valor = match.group(1).strip()
+                                canal_valor = " ".join(canal_valor.split())
 
                         print(f"   📡 Canal detectado: {canal_valor}")
                         
