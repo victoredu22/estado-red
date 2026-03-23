@@ -209,19 +209,27 @@ def main():
                             except Exception as e:
                                 print(f"   Error al cambiar contraseña: {e}")
 
-                            # 3. Guardar cambios
+                            # 3. Guardar cambios / Aplicar
                             try:
-                                print("   Buscando boton Guardar...")
-                                boton_guardar = pagina.locator("text=Guardar").first
-                                if boton_guardar.is_visible():
-                                    print("   Haciendo clic en Guardar...")
-                                    boton_guardar.click()
-                                    pagina.wait_for_timeout(3000)
-                                    print("   Cambios guardados correctamente.")
+                                print("   Buscando boton Guardar o Aplicar...")
+                                # Probamos con el ID especifico del screenshot: #wireless-submit-button
+                                # O con el texto 'Guardar' / 'Aplicar'
+                                boton_aplicar = pagina.locator("#wireless-submit-button")
+                                if not boton_aplicar.is_visible():
+                                    boton_aplicar = pagina.locator("text=Aplicar").first
+                                    
+                                if not boton_aplicar.is_visible():
+                                    boton_aplicar = pagina.locator("text=Guardar").first
+                                    
+                                if boton_aplicar.is_visible():
+                                    print(f"   Haciendo clic en {boton_aplicar.inner_text().strip() or 'el boton de envio'}...")
+                                    boton_aplicar.click()
+                                    pagina.wait_for_timeout(5000) # Esperar mas tiempo para el reinicio de red si aplica
+                                    print("   Cambios aplicados correctamente.")
                                 else:
-                                    print("   Boton Guardar no encontrado.")
+                                    print("   Boton Guardar/Aplicar no encontrado.")
                             except Exception as e:
-                                print(f"   Error al guardar: {e}")
+                                print(f"   Error al guardar/aplicar: {e}")
 
                             actualizar_apartamento(depto["_id"], {
                                 "steps": "Rotacion de canal y cambio de clave finalizados",
