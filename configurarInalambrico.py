@@ -304,23 +304,24 @@ def main():
 
                             # 3. Guardar cambios / Aplicar
                             try:
-                                print("   Buscando boton Guardar o Aplicar...")
-                                # Probamos con el ID especifico del screenshot: #wireless-submit-button
-                                # O con el texto 'Guardar' / 'Aplicar'
-                                boton_aplicar = pagina.locator("#wireless-submit-button")
+                                print("   Buscando boton Aplicar...")
+                                # Selector robusto basado en el HTML proporcionado por el usuario
+                                boton_aplicar = pagina.locator("div.button-wrap a.button-button:has-text('Aplicar')")
+                                
                                 if not boton_aplicar.is_visible():
-                                    boton_aplicar = pagina.locator("text=Aplicar").first
-                                    
-                                if not boton_aplicar.is_visible():
-                                    boton_aplicar = pagina.locator("text=Guardar").first
+                                    # Fallback a selectores genéricos si el específico falla
+                                    boton_aplicar = pagina.locator("#wireless-submit-button")
+                                    if not boton_aplicar.is_visible():
+                                        boton_aplicar = pagina.locator("text=Aplicar").first
                                     
                                 if boton_aplicar.is_visible():
-                                    print(f"   Haciendo clic en {boton_aplicar.inner_text().strip() or 'el boton de envio'}...")
+                                    print(f"   Haciendo clic en el boton Aplicar...")
+                                    boton_aplicar.scroll_into_view_if_needed()
                                     boton_aplicar.click()
-                                    pagina.wait_for_timeout(5000) # Esperar mas tiempo para el reinicio de red si aplica
+                                    pagina.wait_for_timeout(5000) # Esperar al reinicio de red si aplica
                                     print("   Cambios aplicados correctamente.")
                                 else:
-                                    print("   Boton Guardar/Aplicar no encontrado.")
+                                    print("   Boton Aplicar no encontrado.")
                             except Exception as e:
                                 print(f"   Error al guardar/aplicar: {e}")
 
