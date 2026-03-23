@@ -339,9 +339,7 @@ def main():
                         actualizar_apartamento(depto["_id"], {"steps": "Error navegando a Inalambrico", "status": False})
 
                 finally:
-                    # navegador.close() # Comentado según solicitud del usuario
-                    print("\nProceso finalizado. El navegador permanecerá abierto.")
-                    input("Presiona Enter para cerrar el navegador y continuar con el siguiente departamento (si aplica)...")
+                    navegador.close()
 
     except Exception as e:
         print(f"Error general en el proceso: {e}")
