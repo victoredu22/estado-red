@@ -5,6 +5,10 @@ import sys
 import re
 from dotenv import load_dotenv
 
+# Forzar salida en UTF-8 para evitar errores en terminales Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 # =====================
 # CONFIGURACIONES
 # =====================
@@ -47,7 +51,7 @@ def main():
         # 1. Obtener todos los apartamentos
         todos_apartamentos = obtener_apartamentos()
         if not todos_apartamentos:
-            print("❌ No se pudieron obtener los apartamentos de la API.")
+            print("Error: No se pudieron obtener los apartamentos de la API.")
             return
 
         # 2. Determinar cuáles procesar
@@ -56,12 +60,12 @@ def main():
             id_buscado = int(sys.argv[1])
             target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_buscado]
             if not target_apartamentos:
-                print(f"❌ No se encontró el departamento con ID numérico: {id_buscado}")
+                print(f"Error: No se encontró el departamento con ID numérico: {id_buscado}")
                 return
         else:
             # Procesar todos los activos si no se especifica uno
             target_apartamentos = [d for d in todos_apartamentos if d.get("active")]
-            print(f"📋 Se procesarán {len(target_apartamentos)} departamentos activos.")
+            print(f"Se procesarán {len(target_apartamentos)} departamentos activos.")
 
         # 3. Iniciar Playwright
         with sync_playwright() as p:
@@ -80,7 +84,7 @@ def main():
 
                 try:
                     # Conexión
-                    print(f"   🔗 Conectando a {depto['url']}...")
+                    print(f"   Conectando a {depto['url']}...")
                     try:
                         pagina.goto(depto["url"], timeout=30000)
                     except Exception as e:
@@ -136,7 +140,7 @@ def main():
                                 if canal_label.is_visible():
                                     canal_valor = canal_label.inner_text().replace("Canal/Frecuencia", "").replace(":", "").strip()
                         except Exception as e:
-                            print(f"   ⚠️ Fallo selector específico: {e}. Probando Regex...")
+                            print(f"   Fallo selector específico: {e}. Probando Regex...")
                             # Fallback a Regex
                             texto_completo = pagina.content()
                             match = re.search(r"Canal/Frecuencia\s*[:]\s*([\w\s\(\)]+)", texto_completo)
