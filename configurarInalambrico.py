@@ -109,9 +109,14 @@ def main():
             for depto in target_apartamentos:
                 print(f"Procesando: {depto['name']} (ID: {depto['id']})")
                 
+                # Extraer numero del departamento para la contraseña
+                num_depto = "".join(filter(str.isdigit, depto["name"]))
+                if not num_depto:
+                    num_depto = str(depto["id"])
+                
                 # Reseteamos status/steps al iniciar
                 actualizar_apartamento(depto["_id"], {
-                    "steps": "Iniciando navegacion a Inalambrico",
+                    "steps": f"Iniciando configuracion de {depto['name']}",
                     "status": True
                 })
 
@@ -246,35 +251,52 @@ def main():
                             # 2. Cambio de Contraseña (PSK)
                             try:
                                 print("   Buscando campo de contraseña (PSK)...")
-                                # Buscamos el input que contiene 'pablo' o el que sigue al label 'Contraseña de PSK'
-                                input_pass = pagina.locator("input[value*='pablo']").first
+                                # El contenedor es #wl-ap-wpa-pwd según el HTML del usuario
+                                psk_container = pagina.locator("#wl-ap-wpa-pwd")
+                                input_pass = psk_container.locator("input.password-visible").first
                                 if not input_pass.is_visible():
-                                    # Fallback por label si el valor no esta cargado aun
-                                    input_pass = pagina.locator("label:has-text('Contraseña de PSK')").locator("xpath=../../..//input[@type='text']").first
+                                    input_pass = psk_container.locator("input:visible").first
+                                    if not input_pass.is_visible():
+                                        input_pass = psk_container.locator("input").first
                                 
-                                if input_pass.is_visible():
-                                    pass_actual = input_pass.input_value() or input_pass.get_attribute("value") or ""
+                                if input_pass and input_pass.is_visible():
+                                    pass_actual = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
+                                    if not pass_actual:
+                                        # Intentamos leer el texto si el value esta vacio (a veces Pharos lo hace)
+                                        pass_actual = psk_container.inner_text().strip().split('\n')[0]
+                                    
                                     print(f"   Contraseña actual detectada: '{pass_actual}'")
                                     
-                                    # Lógica de cambio: [numero]pablo -> pablo[numero] y viceversa
-                                    nueva_pass = pass_actual
-                                    if pass_actual.endswith("pablo"):
-                                        numero = pass_actual.replace("pablo", "")
-                                        nueva_pass = f"pablo{numero}"
-                                    elif pass_actual.startswith("pablo"):
-                                        numero = pass_actual.replace("pablo", "")
-                                        nueva_pass = f"{numero}pablo"
+                                    # Lógica de cambio: [numero]pablo <-> pablo[numero]
+                                    num_str = str(num_depto)
+                                    base_pablo = f"{num_str}pablo"
+                                    swap_pablo = f"pablo{num_str}"
                                     
-                                    if nueva_pass != pass_actual:
+                                    nueva_pass = base_pablo # Default
+                                    if base_pablo in pass_actual:
+                                        nueva_pass = swap_pablo
+                                    elif swap_pablo in pass_actual:
+                                        nueva_pass = base_pablo
+                                    
+                                    if nueva_pass != pass_actual or True: # Forzamos escritura para asegurar
                                         print(f"   Cambiando contraseña a: '{nueva_pass}'")
                                         input_pass.fill("")
                                         input_pass.fill(nueva_pass)
-                                        print("   Contraseña rellenada.")
-                                    else:
-                                        print("   No se pudo determinar el formato de la contraseña para cambiarla.")
+                                        pagina.wait_for_timeout(1000)
+                                        
+                                        # Verificación final
+                                        verif = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
+                                        if verif == nueva_pass:
+                                            print("   Exito: Contraseña escrita correctamente.")
+                                            cambio_psk_exitoso = True
+                                        else:
+                                            # Respaldo con JS
+                                            input_pass.evaluate(f"node => node.value = '{nueva_pass}'")
+                                            input_pass.dispatch_event("change")
+                                            print(f"   Escrito por JS: '{nueva_pass}'")
+                                            cambio_psk_exitoso = True
                                 else:
-                                    print("   No se encontro el campo de contraseña PSK.")
-
+                                    print("   No se encontro el campo de contraseña PSK en #wl-ap-wpa-pwd.")
                             except Exception as e:
                                 print(f"   Error al cambiar contraseña: {e}")
 
