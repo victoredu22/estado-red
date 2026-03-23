@@ -183,7 +183,6 @@ def main():
                             print("   Sección INALAMBRICO cargada correctamente")
                             
                             # 1. Rotación de Canal
-                            valor_final = None # Inicializar para envío al API
                             try:
                                 print("   Verificando si es necesario habilitar 'Cambio de Canal'...")
                                 # Algunos equipos Pharos requieren marcar este checkbox para editar el canal
@@ -249,116 +248,91 @@ def main():
                             except Exception as e:
                                 print(f"   Error critico al rotar canal: {e}")
 
-                            # 2. Cambio de Contraseña (PSK) Dinámico
+                            # 2. Cambio de Contraseña (PSK)
                             try:
-                                import re
                                 print("   Buscando campo de contraseña (PSK)...")
+                                # El contenedor es #wl-ap-wpa-pwd según el HTML del usuario
                                 psk_container = pagina.locator("#wl-ap-wpa-pwd")
+                                input_pass = psk_container.locator("input.password-visible").first
+                                if not input_pass.is_visible():
+                                    input_pass = psk_container.locator("input:visible").first
+                                    if not input_pass.is_visible():
+                                        input_pass = psk_container.locator("input").first
                                 
-                                # Obtenemos todos los inputs del contenedor para asegurar el cambio
-                                inputs_psk = psk_container.locator("input").all()
-                                
-                                # Detectamos la clave actual de cualquiera que tenga valor
-                                pass_actual = ""
-                                for inp in inputs_psk:
-                                    val = (inp.input_value() or inp.get_attribute("value") or "").strip()
-                                    if val:
-                                        pass_actual = val
-                                        break
-                                
-                                if not pass_actual:
-                                    # Fallback: leer el texto si los inputs estan enmascarados/vacios
-                                    pass_actual = psk_container.inner_text().strip().split('\n')[0].replace("Mostrar", "").strip()
-
-                                if pass_actual:
+                                if input_pass and input_pass.is_visible():
+                                    pass_actual = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
+                                    if not pass_actual:
+                                        # Intentamos leer el texto si el value esta vacio (a veces Pharos lo hace)
+                                        pass_actual = psk_container.inner_text().strip().split('\n')[0]
+                                    
                                     print(f"   Contraseña actual detectada: '{pass_actual}'")
                                     
-                                    # Lógica dinámica: [CualquierCosa]pablo <-> pablo[CualquierCosa]
-                                    nueva_pass = pass_actual
-                                    if pass_actual.lower().endswith("pablo"):
-                                        resto = pass_actual[:-5] # Quitar 'pablo' del final
-                                        nueva_pass = f"pablo{resto}"
-                                    elif pass_actual.lower().startswith("pablo"):
-                                        resto = pass_actual[5:] # Quitar 'pablo' del principio
-                                        nueva_pass = f"{resto}pablo"
-                                    else:
-                                        # Si no sigue el patron, forzamos el del depto como respaldo
-                                        nueva_pass = f"{num_depto}pablo"
+                                    # Lógica de cambio: [numero]pablo <-> pablo[numero]
+                                    num_str = str(num_depto)
+                                    base_pablo = f"{num_str}pablo"
+                                    swap_pablo = f"pablo{num_str}"
                                     
-                                    if nueva_pass != pass_actual or True:
-                                        print(f"   Cambiando contraseña de '{pass_actual}' a '{nueva_pass}'")
-                                        for inp in inputs_psk:
-                                            if inp.is_visible():
-                                                inp.fill("")
-                                                inp.fill(nueva_pass)
-                                        
-                                        # Forzar valor por JS en el contenedor por si acaso
-                                        psk_container.evaluate(f"node => {{ const inp = node.querySelector('input:not([style*=\"display: none\"])'); if(inp) {{ inp.value = '{nueva_pass}'; inp.dispatchEvent(new Event('change')); }} }}")
-                                        
+                                    nueva_pass = base_pablo # Default
+                                    if base_pablo in pass_actual:
+                                        nueva_pass = swap_pablo
+                                    elif swap_pablo in pass_actual:
+                                        nueva_pass = base_pablo
+                                    
+                                    if nueva_pass != pass_actual or True: # Forzamos escritura para asegurar
+                                        print(f"   Cambiando contraseña a: '{nueva_pass}'")
+                                        input_pass.fill("")
+                                        input_pass.fill(nueva_pass)
                                         pagina.wait_for_timeout(1000)
-                                        print("   Contraseña rellenada (Metodo Hibrido).")
-                                        cambio_psk_exitoso = True
+                                        
+                                        # Verificación final
+                                        verif = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
+                                        if verif == nueva_pass:
+                                            print("   Exito: Contraseña escrita correctamente.")
+                                            cambio_psk_exitoso = True
+                                        else:
+                                            # Respaldo con JS
+                                            input_pass.evaluate(f"node => node.value = '{nueva_pass}'")
+                                            input_pass.dispatch_event("change")
+                                            print(f"   Escrito por JS: '{nueva_pass}'")
+                                            cambio_psk_exitoso = True
                                 else:
-                                    print("   No se pudo detectar la contraseña actual. Forzando una nueva por defecto.")
-                                    nueva_pass = f"{num_depto}pablo"
-                                    for inp in inputs_psk:
-                                        if inp.is_visible():
-                                            inp.fill(nueva_pass)
-                                    cambio_psk_exitoso = True
-
+                                    print("   No se encontro el campo de contraseña PSK en #wl-ap-wpa-pwd.")
                             except Exception as e:
                                 print(f"   Error al cambiar contraseña: {e}")
 
                             # 3. Guardar cambios / Aplicar
                             try:
-                                print("   Buscando boton Aplicar...")
-                                # Selector basado en el HTML del usuario: .button-wrap >> text=Aplicar
-                                boton_aplicar = pagina.locator("div.button-wrap").filter(has_text="Aplicar").locator("a.button-button").first
+                                print("   Buscando boton Guardar o Aplicar...")
+                                # Probamos con el ID especifico del screenshot: #wireless-submit-button
+                                # O con el texto 'Guardar' / 'Aplicar'
+                                boton_aplicar = pagina.locator("#wireless-submit-button")
                                 if not boton_aplicar.is_visible():
-                                    boton_aplicar = pagina.locator("a.button-button").filter(has_text="Aplicar").first
-                                
+                                    boton_aplicar = pagina.locator("text=Aplicar").first
+                                    
+                                if not boton_aplicar.is_visible():
+                                    boton_aplicar = pagina.locator("text=Guardar").first
+                                    
                                 if boton_aplicar.is_visible():
-                                    print(f"   Haciendo clic en el boton Aplicar...")
-                                    # Metodo 1: Clic natural
+                                    print(f"   Haciendo clic en {boton_aplicar.inner_text().strip() or 'el boton de envio'}...")
                                     boton_aplicar.click()
-                                    pagina.wait_for_timeout(3000)
-                                    
-                                    # Si sigue visible, intentamos Metodo 2: JS Evaluate
-                                    if boton_aplicar.is_visible():
-                                        print("   El boton sigue visible. Intentando clic forzado por JS...")
-                                        boton_aplicar.evaluate("node => node.click()")
-                                        pagina.wait_for_timeout(5000)
-                                    
+                                    pagina.wait_for_timeout(5000) # Esperar mas tiempo para el reinicio de red si aplica
                                     print("   Cambios aplicados correctamente.")
-                                    cambio_canal_exitoso = True # Asumimos éxito si llegamos aquí
                                 else:
-                                    print("   Boton Aplicar no encontrado. Probando fallback con selectors genericos...")
-                                    fallback = pagina.locator("#wireless-submit-button").or_(pagina.get_by_text("Aplicar")).or_(pagina.get_by_text("Guardar"))
-                                    if fallback.count() > 0 and fallback.first.is_visible():
-                                        print(f"   Haciendo clic en el fallback: {fallback.first.inner_text()}")
-                                        fallback.first.click()
-                                        pagina.wait_for_timeout(5000)
-                                        cambio_canal_exitoso = True
-                                    else:
-                                        print("   No se encontro ningun boton de envio.")
+                                    print("   Boton Guardar/Aplicar no encontrado.")
                             except Exception as e:
                                 print(f"   Error al guardar/aplicar: {e}")
 
-                            update_data = {
+                            actualizar_apartamento(depto["_id"], {
                                 "steps": "Rotacion de canal y cambio de clave finalizados",
                                 "status": True
-                            }
-                            if valor_final:
-                                update_data["channel"] = valor_final
-                                
-                            actualizar_apartamento(depto["_id"], update_data)
+                            })
                             pagina.wait_for_timeout(2000)
                         else:
                             print("   No se pudo encontrar el link a INALAMBRICO")
                             actualizar_apartamento(depto["_id"], {"steps": "No se encontró sección Inalambrico", "status": False})
 
                     except Exception as e:
-                        print(f"   Error al navegar: {e}")
+                        print(f" Error al navegar: {e}")
                         actualizar_apartamento(depto["_id"], {"steps": "Error navegando a Inalambrico", "status": False})
 
                 finally:
