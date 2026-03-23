@@ -280,21 +280,23 @@ def main():
                                     
                                     if nueva_pass != pass_actual or True: # Forzamos escritura para asegurar
                                         print(f"   Cambiando contraseña a: '{nueva_pass}'")
-                                        input_pass.fill("")
-                                        input_pass.fill(nueva_pass)
-                                        pagina.wait_for_timeout(1000)
                                         
-                                        # Verificación final
-                                        verif = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
-                                        if verif == nueva_pass:
-                                            print("   Exito: Contraseña escrita correctamente.")
-                                            cambio_psk_exitoso = True
-                                        else:
-                                            # Respaldo con JS
-                                            input_pass.evaluate(f"node => node.value = '{nueva_pass}'")
-                                            input_pass.dispatch_event("change")
-                                            print(f"   Escrito por JS: '{nueva_pass}'")
-                                            cambio_psk_exitoso = True
+                                        # Enfoque robusto: Iterar por todos los inputs del contenedor (oculto y visible)
+                                        inputs = psk_container.locator("input").all()
+                                        for inp in inputs:
+                                            try:
+                                                # Limpiar y escribir con delay para simular usuario real
+                                                inp.fill("")
+                                                inp.type(nueva_pass, delay=100)
+                                                # Disparar eventos críticos para el framework UI
+                                                inp.dispatch_event("input")
+                                                inp.dispatch_event("change")
+                                                inp.dispatch_event("blur")
+                                            except:
+                                                pass
+                                        
+                                        print(f"   Escritura robusta finalizada: '{nueva_pass}'")
+                                        cambio_psk_exitoso = True
                                 else:
                                     print("   No se encontro el campo de contraseña PSK en #wl-ap-wpa-pwd.")
                             except Exception as e:
