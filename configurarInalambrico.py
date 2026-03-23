@@ -302,23 +302,36 @@ def main():
 
                             # 3. Guardar cambios / Aplicar
                             try:
-                                print("   Buscando boton Guardar o Aplicar...")
-                                # Probamos con el ID especifico del screenshot: #wireless-submit-button
-                                # O con el texto 'Guardar' / 'Aplicar'
-                                boton_aplicar = pagina.locator("#wireless-submit-button")
+                                print("   Buscando boton Aplicar...")
+                                # Selector basado en el HTML del usuario: .button-wrap >> text=Aplicar
+                                boton_aplicar = pagina.locator("div.button-wrap").filter(has_text="Aplicar").locator("a.button-button").first
                                 if not boton_aplicar.is_visible():
-                                    boton_aplicar = pagina.locator("text=Aplicar").first
-                                    
-                                if not boton_aplicar.is_visible():
-                                    boton_aplicar = pagina.locator("text=Guardar").first
-                                    
+                                    boton_aplicar = pagina.locator("a.button-button").filter(has_text="Aplicar").first
+                                
                                 if boton_aplicar.is_visible():
-                                    print(f"   Haciendo clic en {boton_aplicar.inner_text().strip() or 'el boton de envio'}...")
+                                    print(f"   Haciendo clic en el boton Aplicar...")
+                                    # Metodo 1: Clic natural
                                     boton_aplicar.click()
-                                    pagina.wait_for_timeout(5000) # Esperar mas tiempo para el reinicio de red si aplica
+                                    pagina.wait_for_timeout(3000)
+                                    
+                                    # Si sigue visible, intentamos Metodo 2: JS Evaluate
+                                    if boton_aplicar.is_visible():
+                                        print("   El boton sigue visible. Intentando clic forzado por JS...")
+                                        boton_aplicar.evaluate("node => node.click()")
+                                        pagina.wait_for_timeout(5000)
+                                    
                                     print("   Cambios aplicados correctamente.")
+                                    cambio_canal_exitoso = True # Asumimos éxito si llegamos aquí
                                 else:
-                                    print("   Boton Guardar/Aplicar no encontrado.")
+                                    print("   Boton Aplicar no encontrado. Probando fallback con selectors genericos...")
+                                    fallback = pagina.locator("#wireless-submit-button").or_(pagina.get_by_text("Aplicar")).or_(pagina.get_by_text("Guardar"))
+                                    if fallback.count() > 0 and fallback.first.is_visible():
+                                        print(f"   Haciendo clic en el fallback: {fallback.first.inner_text()}")
+                                        fallback.first.click()
+                                        pagina.wait_for_timeout(5000)
+                                        cambio_canal_exitoso = True
+                                    else:
+                                        print("   No se encontro ningun boton de envio.")
                             except Exception as e:
                                 print(f"   Error al guardar/aplicar: {e}")
 
