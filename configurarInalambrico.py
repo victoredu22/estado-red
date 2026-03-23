@@ -196,51 +196,49 @@ def main():
                                 
                                 print(f"   Canal actual: '{valor_actual}'")
                                 
-                                # Rotación circular: 1 -> 6 -> 11 -> 1
-                                nuevo_canal = "1 /" # Valor por defecto seguro
+                                # Rotación circular: 11 -> 1 -> 6 -> 11
+                                nuevo_canal_prefix = "1 /"
                                 if "11 /" in valor_actual:
-                                    nuevo_canal = "1 /"
+                                    nuevo_canal_prefix = "1 /"
                                 elif "1 /" in valor_actual:
-                                    nuevo_canal = "6 /"
+                                    nuevo_canal_prefix = "6 /"
                                 elif "6 /" in valor_actual:
-                                    nuevo_canal = "11 /"
-                                else:
-                                    nuevo_canal = "1 /" # Fallback a 1 si el canal actual es Auto u otro
+                                    nuevo_canal_prefix = "11 /"
                                 
-                                print(f"   Objetivo: Seleccionar '{nuevo_canal}'")
+                                print(f"   Objetivo: Seleccionar canal que empiece con '{nuevo_canal_prefix}'")
                                 
-                                # Abrir el menu: Clic en el switch (.combobox-switch)
-                                switch = container.locator(".combobox-switch")
-                                switch.click()
+                                # Abrir el menu
+                                container.locator(".combobox-switch").click()
                                 pagina.wait_for_timeout(2000)
                                 
-                                # Intentamos varios selectores para la opcion
-                                selector_li = f"li:has-text('{nuevo_canal}')"
-                                if not pagina.locator(selector_li).last.is_visible():
-                                    selector_li = f"li.combobox-list-item:has-text('{nuevo_canal}')"
+                                # Selector preciso usando REGEX para evitar que '11' coincida con '1'
+                                # Buscamos LIs que EMPIECEN exactamente con el prefijo deseado
+                                regex_selector = re.compile(f"^{re.escape(nuevo_canal_prefix)}")
+                                opcion = pagina.locator("li").filter(has_text=regex_selector).last
                                 
-                                opcion = pagina.locator(selector_li).last
                                 if opcion.is_visible():
-                                    print(f"   Haciendo clic en la opcion: '{opcion.inner_text().strip()}'")
-                                    # Intentamos Metodo 1: Clic estandar
+                                    texto_opcion = opcion.inner_text().strip()
+                                    print(f"   Haciendo clic preciso en: '{texto_opcion}'")
+                                    
+                                    # Metodo 1: Clic estandar
                                     opcion.click(force=True)
                                     pagina.wait_for_timeout(2000)
                                     
                                     # Verificacion
-                                    valor_ahora = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
-                                    if nuevo_canal not in valor_ahora:
-                                        print("   No cambio el valor con click estandar. Intentando Metodo 2: Evaluate JS Click...")
-                                        opcion.evaluate("node => node.click()")
-                                        pagina.wait_for_timeout(2000)
-                                    
-                                    # Verificacion Final
                                     valor_final = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
-                                    if nuevo_canal in valor_final:
+                                    if nuevo_canal_prefix in valor_final:
                                         print(f"   Exito: Canal cambiado a {valor_final}")
                                     else:
-                                        print(f"   Fallo final: No se pudo cambiar el canal. Valor actual: '{valor_final}'")
+                                        print(f"   No cambio. Intentando Metodo 2: JS evaluate click...")
+                                        opcion.evaluate("node => node.click()")
+                                        pagina.wait_for_timeout(2000)
+                                        valor_final = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
+                                        print(f"   Valor final tras JS: '{valor_final}'")
                                 else:
-                                    print(f"   Error: No se visualiza la opcion '{nuevo_canal}' en el menu desplegable.")
+                                    print(f"   Error: No se encontro ninguna opcion que empiece con '{nuevo_canal_prefix}'")
+                                    # Depuracion: ver que opciones hay
+                                    opciones = pagina.locator("li:visible").all_inner_texts()
+                                    print(f"   Opciones visibles (primeras 5): {opciones[:5]}")
 
                             except Exception as e:
                                 print(f"   Error critico al rotar canal: {e}")
