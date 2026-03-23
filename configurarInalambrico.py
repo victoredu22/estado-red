@@ -196,8 +196,8 @@ def main():
                                 
                                 print(f"   Canal actual: '{valor_actual}'")
                                 
-                                # El usuario solicita que siempre se cambie al canal 1
-                                nuevo_canal = "1 /"
+                                # El usuario solicita que siempre se cambie al canal 6
+                                nuevo_canal = "6 /"
                                 
                                 print(f"   Objetivo: Seleccionar '{nuevo_canal}'")
                                 
