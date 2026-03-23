@@ -57,15 +57,52 @@ def main():
         # 2. Determinar cuáles procesar
         target_apartamentos = []
         if len(sys.argv) >= 2:
-            id_buscado = int(sys.argv[1])
-            target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_buscado]
+            param_buscado = sys.argv[1]
+            try:
+                # Intentar buscar por ID numérico exacto
+                id_num = int(param_buscado)
+                target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_num]
+            except ValueError:
+                pass
+            
+            # Si no se encontró por ID o el parámetro no era un número, buscar por nombre
             if not target_apartamentos:
-                print(f"Error: No se encontró el departamento con ID numérico: {id_buscado}")
+                # Buscamos departamentos cuyo nombre contenga el número o sea el número exacto
+                # Ej: "Depto 1" contiene "1"
+                # O si el usuario puso "Depto 1" completo
+                target_apartamentos = [
+                    d for d in todos_apartamentos 
+                    if param_buscado.lower() in d.get("name", "").lower() or 
+                       (str(d.get("id")) == param_buscado)
+                ]
+            
+            if not target_apartamentos:
+                print(f"Error: No se encontró el departamento relacionado con: '{param_buscado}'")
                 return
+            
+            # Si hay más de uno (ej: "1" en "Depto 1" y "Depto 11"), intentamos el match más corto o exacto
+            if len(target_apartamentos) > 1:
+                # Filtramos por el nombre exacto si existe
+                match_exacto = [d for d in target_apartamentos if d.get("name", "").lower() == param_buscado.lower()]
+                if match_exacto:
+                    target_apartamentos = match_exacto
+                else:
+                    # O el que contenga el número con un espacio, ej: "Depto 1"
+                    match_espacio = [d for d in target_apartamentos if f" {param_buscado}" in d.get("name", "")]
+                    if match_espacio:
+                        target_apartamentos = [match_espacio[0]]
+                    else:
+                        target_apartamentos = [target_apartamentos[0]] # Tomamos el primero
+            
+            print(f"Objetivo: {target_apartamentos[0]['name']} (ID: {target_apartamentos[0]['id']})")
         else:
-            # Procesar todos los activos si no se especifica uno
-            target_apartamentos = [d for d in todos_apartamentos if d.get("active")]
-            print(f"Se procesarán {len(target_apartamentos)} departamentos activos.")
+            # Procesar todos los activos si no se especifica uno (opcional, el usuario dijo que ahora seria especifico)
+            print("No se especificó un departamento. Listando opciones disponibles (IDs):")
+            activos = [d for d in todos_apartamentos if d.get("active")]
+            for a in activos:
+                print(f" - {a['id']}: {a['name']}")
+            print("\nUso: py configurarInalambrico.py <numero_depto>")
+            return
 
         # 3. Iniciar Playwright
         with sync_playwright() as p:
