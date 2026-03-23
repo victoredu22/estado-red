@@ -177,11 +177,15 @@ def main():
                         if found:
                             print("   Sección INALAMBRICO cargada correctamente")
                             
-                            # 1. Rotación de Canal (ya implementado)
+                            # 1. Rotación de Canal
                             try:
                                 print("   Detectando canal actual...")
                                 input_text = pagina.locator("#wl-basic-ap-channel input.combobox-text")
                                 valor_actual = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
+                                if not valor_actual:
+                                    # Intentamos buscar el texto visible si el valor esta vacio
+                                    valor_actual = pagina.locator("#wl-basic-ap-channel .combobox-text").inner_text().strip()
+                                
                                 print(f"   Canal actual: '{valor_actual}'")
                                 
                                 # Definir el nuevo canal según la rotación
@@ -194,19 +198,43 @@ def main():
                                     nuevo_canal = "6 /"
                                 
                                 print(f"   Seleccionando nuevo canal: '{nuevo_canal}'...")
+                                
+                                # Intentamos abrir el menu (clic en switch/flecha)
                                 switch = pagina.locator("#wl-basic-ap-channel .combobox-switch")
                                 if switch.is_visible():
                                     switch.click()
                                 else:
                                     input_text.click()
                                     
-                                pagina.wait_for_timeout(2000)
-                                opcion_nueva = pagina.locator(f"li:has-text('{nuevo_canal}')").last
+                                pagina.wait_for_timeout(2500)
+                                
+                                # Buscar la opción (puede tardar en aparecer)
+                                # Usamos un selector que busque LI de combobox específicamente
+                                selector_opcion = f"li.combobox-list-item:has-text('{nuevo_canal}')"
+                                if not pagina.locator(selector_opcion).last.is_visible():
+                                    # Fallback a un selector mas generico si el de arriba falla
+                                    selector_opcion = f"li:has-text('{nuevo_canal}')"
+                                
+                                opcion_nueva = pagina.locator(selector_opcion).last
                                 if opcion_nueva.is_visible():
+                                    texto_opcion = opcion_nueva.inner_text().strip()
+                                    print(f"   Haciendo clic en la opcion: '{texto_opcion}'")
                                     opcion_nueva.click()
-                                    print(f"   Canal cambiado a {nuevo_canal}.")
+                                    pagina.wait_for_timeout(2000)
+                                    
+                                    # Verificacion del cambio
+                                    valor_final = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
+                                    if nuevo_canal in valor_final:
+                                        print(f"   Exito: Canal cambiado a {valor_final}.")
+                                    else:
+                                        print(f"   FALLO: El valor sigue siendo '{valor_final}'. Reintentando clic forzado...")
+                                        opcion_nueva.dispatch_event("click")
+                                        pagina.wait_for_timeout(2000)
                                 else:
-                                    print(f"   No se encontro la opcion '{nuevo_canal}'")
+                                    print(f"   Error: No se visualiza la opcion '{nuevo_canal}' en el menu.")
+                                    # Listar lo que sí hay para debug
+                                    visibles = pagina.locator("li.combobox-list-item:visible").all_inner_texts()
+                                    print(f"   Opciones visibles detectadas: {visibles}")
 
                             except Exception as e:
                                 print(f"   Error al rotar canal: {e}")
