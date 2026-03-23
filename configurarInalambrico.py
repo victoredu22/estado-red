@@ -142,40 +142,53 @@ def main():
                             
                             # Seleccionar el Canal 6 (6 / 2437MHz)
                             try:
-                                print("   Intentando abrir select de Canal...")
-                                # Según el screenshot: id="wl-basic-ap-channel"
-                                # Este combobox suele abrirse al hacerle clic
-                                combo = pagina.locator("#wl-basic-ap-channel")
-                                combo.click()
-                                pagina.wait_for_timeout(1000)
+                                print("   Intentando abrir el menu de Canales...")
+                                # En este tipo de widgets, el clic debe ser en el 'switch' (la flechita)
+                                # o en el input si el switch no responde bien.
                                 
-                                # Buscar la opción que empiece con "6 /" o sea exactamente Canal 6
-                                # En estos dispositivos TP-Link/Pharos suelen ser elementos li o .combobox-list-item
-                                print("   Buscando opción 6...")
-                                opcion_6 = pagina.locator("li:has-text('6 /')")
+                                switch = pagina.locator("#wl-basic-ap-channel .combobox-switch")
+                                input_text = pagina.locator("#wl-basic-ap-channel input.combobox-text")
                                 
-                                if not opcion_6.is_visible():
-                                    # Fallback si el selector de arriba no funciona
-                                    opcion_6 = pagina.locator(".combobox-list-item:has-text('6 /')")
+                                if switch.is_visible():
+                                    print("   Click en el switch (.combobox-switch)")
+                                    switch.click()
+                                else:
+                                    print("   Switch no visible, intentando click en el input")
+                                    input_text.click()
                                     
+                                pagina.wait_for_timeout(2000)
+                                
+                                # El menú desplegable (la lista de opciones) suele aparecer al final del DOM
+                                # o dentro de un contenedor .combobox-list-container
+                                print("   Buscando la opcion '6 /' en la lista...")
+                                
+                                # Usamos un selector mas global para encontrar el LI que contiene el texto
+                                opcion_6 = pagina.locator("li:has-text('6 /')").last
+                                
                                 if opcion_6.is_visible():
+                                    print(f"   Opcion encontrada: {opcion_6.inner_text()}")
+                                    opcion_6.scroll_into_view_if_needed()
                                     opcion_6.click()
-                                    print("   Canal 6 seleccionado correctamente.")
+                                    print("   Se hizo clic en la opcion Canal 6.")
                                     
-                                    # Esperar un poco para ver el cambio
+                                    # Esperar a que se procese el cambio
                                     pagina.wait_for_timeout(2000)
                                     
-                                    # ¿Debería hacer clic en Guardar? 
-                                    # De momento lo dejamos configurado, pero no guardado para seguridad 
-                                    # a menos que el usuario lo pida explícitamente.
-                                else:
-                                    print("   No se pudo encontrar la opción 6 en el menú desplegable.")
+                                    # Verificar si se seleccionó (el input debería tener el valor ahora)
+                                    valor_final = input_text.get_attribute("value") or input_text.input_value()
+                                    print(f"   Valor actual en el input despues de clic: '{valor_final}'")
                                     
+                                else:
+                                    # Si no se ve, quizás hay que hacerle focus o scroll
+                                    print("   No se visualiza la opcion 6. Listando todas las opciones visibles:")
+                                    options = pagina.locator("li.combobox-list-item").all_inner_texts()
+                                    print(f"   Opciones encontradas: {options}")
+
                             except Exception as e:
                                 print(f"   Error al intentar seleccionar el canal: {e}")
 
                             actualizar_apartamento(depto["_id"], {
-                                "steps": "Canal 6 seleccionado en Inalambrico",
+                                "steps": "Proceso de seleccion de Canal 6 finalizado",
                                 "status": True
                             })
                             # Esperar un poco para que el usuario vea la página
