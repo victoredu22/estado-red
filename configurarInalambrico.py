@@ -267,9 +267,10 @@ def main():
                                     
                                     print(f"   Contraseña actual detectada: '{pass_actual}'")
                                     
-                                    # Lógica de cambio: 319923pablo <-> pablo319923
-                                    base_pablo = "319923pablo"
-                                    swap_pablo = "pablo319923"
+                                    # Lógica de cambio: 319923pablo[num] <-> pablo[num]319923
+                                    num_str = str(num_depto)
+                                    base_pablo = f"319923pablo{num_str}"
+                                    swap_pablo = f"pablo{num_str}319923"
                                     
                                     nueva_pass = base_pablo # Default
                                     if base_pablo in pass_actual:
