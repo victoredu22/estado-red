@@ -196,13 +196,8 @@ def main():
                                 
                                 print(f"   Canal actual: '{valor_actual}'")
                                 
-                                nuevo_canal = "6 /"
-                                if "6 /" in valor_actual:
-                                    nuevo_canal = "11 /"
-                                elif "11 /" in valor_actual:
-                                    nuevo_canal = "1 /"
-                                elif "1 /" in valor_actual:
-                                    nuevo_canal = "6 /"
+                                # El usuario solicita que siempre se cambie al canal 1
+                                nuevo_canal = "1 /"
                                 
                                 print(f"   Objetivo: Seleccionar '{nuevo_canal}'")
                                 
