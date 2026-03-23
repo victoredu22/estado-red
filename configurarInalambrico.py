@@ -183,6 +183,7 @@ def main():
                             print("   Sección INALAMBRICO cargada correctamente")
                             
                             # 1. Rotación de Canal
+                            valor_final = None # Inicializar para envío al API
                             try:
                                 print("   Verificando si es necesario habilitar 'Cambio de Canal'...")
                                 # Algunos equipos Pharos requieren marcar este checkbox para editar el canal
@@ -248,55 +249,63 @@ def main():
                             except Exception as e:
                                 print(f"   Error critico al rotar canal: {e}")
 
-                            # 2. Cambio de Contraseña (PSK)
+                            # 2. Cambio de Contraseña (PSK) Dinámico
                             try:
+                                import re
                                 print("   Buscando campo de contraseña (PSK)...")
-                                # El contenedor es #wl-ap-wpa-pwd según el HTML del usuario
                                 psk_container = pagina.locator("#wl-ap-wpa-pwd")
-                                input_pass = psk_container.locator("input.password-visible").first
-                                if not input_pass.is_visible():
-                                    input_pass = psk_container.locator("input:visible").first
-                                    if not input_pass.is_visible():
-                                        input_pass = psk_container.locator("input").first
                                 
-                                if input_pass and input_pass.is_visible():
-                                    pass_actual = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
-                                    if not pass_actual:
-                                        # Intentamos leer el texto si el value esta vacio (a veces Pharos lo hace)
-                                        pass_actual = psk_container.inner_text().strip().split('\n')[0]
-                                    
+                                # Obtenemos todos los inputs del contenedor para asegurar el cambio
+                                inputs_psk = psk_container.locator("input").all()
+                                
+                                # Detectamos la clave actual de cualquiera que tenga valor
+                                pass_actual = ""
+                                for inp in inputs_psk:
+                                    val = (inp.input_value() or inp.get_attribute("value") or "").strip()
+                                    if val:
+                                        pass_actual = val
+                                        break
+                                
+                                if not pass_actual:
+                                    # Fallback: leer el texto si los inputs estan enmascarados/vacios
+                                    pass_actual = psk_container.inner_text().strip().split('\n')[0].replace("Mostrar", "").strip()
+
+                                if pass_actual:
                                     print(f"   Contraseña actual detectada: '{pass_actual}'")
                                     
-                                    # Lógica de cambio: [numero]pablo <-> pablo[numero]
-                                    num_str = str(num_depto)
-                                    base_pablo = f"{num_str}pablo"
-                                    swap_pablo = f"pablo{num_str}"
+                                    # Lógica dinámica: [CualquierCosa]pablo <-> pablo[CualquierCosa]
+                                    nueva_pass = pass_actual
+                                    if pass_actual.lower().endswith("pablo"):
+                                        resto = pass_actual[:-5] # Quitar 'pablo' del final
+                                        nueva_pass = f"pablo{resto}"
+                                    elif pass_actual.lower().startswith("pablo"):
+                                        resto = pass_actual[5:] # Quitar 'pablo' del principio
+                                        nueva_pass = f"{resto}pablo"
+                                    else:
+                                        # Si no sigue el patron, forzamos el del depto como respaldo
+                                        nueva_pass = f"{num_depto}pablo"
                                     
-                                    nueva_pass = base_pablo # Default
-                                    if base_pablo in pass_actual:
-                                        nueva_pass = swap_pablo
-                                    elif swap_pablo in pass_actual:
-                                        nueva_pass = base_pablo
-                                    
-                                    if nueva_pass != pass_actual or True: # Forzamos escritura para asegurar
-                                        print(f"   Cambiando contraseña a: '{nueva_pass}'")
-                                        input_pass.fill("")
-                                        input_pass.fill(nueva_pass)
-                                        pagina.wait_for_timeout(1000)
+                                    if nueva_pass != pass_actual or True:
+                                        print(f"   Cambiando contraseña de '{pass_actual}' a '{nueva_pass}'")
+                                        for inp in inputs_psk:
+                                            if inp.is_visible():
+                                                inp.fill("")
+                                                inp.fill(nueva_pass)
                                         
-                                        # Verificación final
-                                        verif = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
-                                        if verif == nueva_pass:
-                                            print("   Exito: Contraseña escrita correctamente.")
-                                            cambio_psk_exitoso = True
-                                        else:
-                                            # Respaldo con JS
-                                            input_pass.evaluate(f"node => node.value = '{nueva_pass}'")
-                                            input_pass.dispatch_event("change")
-                                            print(f"   Escrito por JS: '{nueva_pass}'")
-                                            cambio_psk_exitoso = True
+                                        # Forzar valor por JS en el contenedor por si acaso
+                                        psk_container.evaluate(f"node => {{ const inp = node.querySelector('input:not([style*=\"display: none\"])'); if(inp) {{ inp.value = '{nueva_pass}'; inp.dispatchEvent(new Event('change')); }} }}")
+                                        
+                                        pagina.wait_for_timeout(1000)
+                                        print("   Contraseña rellenada (Metodo Hibrido).")
+                                        cambio_psk_exitoso = True
                                 else:
-                                    print("   No se encontro el campo de contraseña PSK en #wl-ap-wpa-pwd.")
+                                    print("   No se pudo detectar la contraseña actual. Forzando una nueva por defecto.")
+                                    nueva_pass = f"{num_depto}pablo"
+                                    for inp in inputs_psk:
+                                        if inp.is_visible():
+                                            inp.fill(nueva_pass)
+                                    cambio_psk_exitoso = True
+
                             except Exception as e:
                                 print(f"   Error al cambiar contraseña: {e}")
 
@@ -335,10 +344,14 @@ def main():
                             except Exception as e:
                                 print(f"   Error al guardar/aplicar: {e}")
 
-                            actualizar_apartamento(depto["_id"], {
+                            update_data = {
                                 "steps": "Rotacion de canal y cambio de clave finalizados",
                                 "status": True
-                            })
+                            }
+                            if valor_final:
+                                update_data["channel"] = valor_final
+                                
+                            actualizar_apartamento(depto["_id"], update_data)
                             pagina.wait_for_timeout(2000)
                         else:
                             print("   No se pudo encontrar el link a INALAMBRICO")
