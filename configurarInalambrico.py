@@ -140,58 +140,93 @@ def main():
                         if found:
                             print("   Sección INALAMBRICO cargada correctamente")
                             
-                            # Seleccionar el Canal 6 (6 / 2437MHz)
+                            # 1. Rotación de Canal (ya implementado)
                             try:
-                                print("   Intentando abrir el menu de Canales...")
-                                # En este tipo de widgets, el clic debe ser en el 'switch' (la flechita)
-                                # o en el input si el switch no responde bien.
-                                
-                                switch = pagina.locator("#wl-basic-ap-channel .combobox-switch")
+                                print("   Detectando canal actual...")
                                 input_text = pagina.locator("#wl-basic-ap-channel input.combobox-text")
+                                valor_actual = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
+                                print(f"   Canal actual: '{valor_actual}'")
                                 
+                                # Definir el nuevo canal según la rotación
+                                nuevo_canal = "6 /" # Valor por defecto
+                                if "6 /" in valor_actual:
+                                    nuevo_canal = "11 /"
+                                elif "11 /" in valor_actual:
+                                    nuevo_canal = "1 /"
+                                elif "1 /" in valor_actual:
+                                    nuevo_canal = "6 /"
+                                
+                                print(f"   Seleccionando nuevo canal: '{nuevo_canal}'...")
+                                switch = pagina.locator("#wl-basic-ap-channel .combobox-switch")
                                 if switch.is_visible():
-                                    print("   Click en el switch (.combobox-switch)")
                                     switch.click()
                                 else:
-                                    print("   Switch no visible, intentando click en el input")
                                     input_text.click()
                                     
                                 pagina.wait_for_timeout(2000)
-                                
-                                # El menú desplegable (la lista de opciones) suele aparecer al final del DOM
-                                # o dentro de un contenedor .combobox-list-container
-                                print("   Buscando la opcion '6 /' en la lista...")
-                                
-                                # Usamos un selector mas global para encontrar el LI que contiene el texto
-                                opcion_6 = pagina.locator("li:has-text('6 /')").last
-                                
-                                if opcion_6.is_visible():
-                                    print(f"   Opcion encontrada: {opcion_6.inner_text()}")
-                                    opcion_6.scroll_into_view_if_needed()
-                                    opcion_6.click()
-                                    print("   Se hizo clic en la opcion Canal 6.")
-                                    
-                                    # Esperar a que se procese el cambio
-                                    pagina.wait_for_timeout(2000)
-                                    
-                                    # Verificar si se seleccionó (el input debería tener el valor ahora)
-                                    valor_final = input_text.get_attribute("value") or input_text.input_value()
-                                    print(f"   Valor actual en el input despues de clic: '{valor_final}'")
-                                    
+                                opcion_nueva = pagina.locator(f"li:has-text('{nuevo_canal}')").last
+                                if opcion_nueva.is_visible():
+                                    opcion_nueva.click()
+                                    print(f"   Canal cambiado a {nuevo_canal}.")
                                 else:
-                                    # Si no se ve, quizás hay que hacerle focus o scroll
-                                    print("   No se visualiza la opcion 6. Listando todas las opciones visibles:")
-                                    options = pagina.locator("li.combobox-list-item").all_inner_texts()
-                                    print(f"   Opciones encontradas: {options}")
+                                    print(f"   No se encontro la opcion '{nuevo_canal}'")
 
                             except Exception as e:
-                                print(f"   Error al intentar seleccionar el canal: {e}")
+                                print(f"   Error al rotar canal: {e}")
+
+                            # 2. Cambio de Contraseña (PSK)
+                            try:
+                                print("   Buscando campo de contraseña (PSK)...")
+                                # Buscamos el input que contiene 'pablo' o el que sigue al label 'Contraseña de PSK'
+                                input_pass = pagina.locator("input[value*='pablo']").first
+                                if not input_pass.is_visible():
+                                    # Fallback por label si el valor no esta cargado aun
+                                    input_pass = pagina.locator("label:has-text('Contraseña de PSK')").locator("xpath=../../..//input[@type='text']").first
+                                
+                                if input_pass.is_visible():
+                                    pass_actual = input_pass.input_value() or input_pass.get_attribute("value") or ""
+                                    print(f"   Contraseña actual detectada: '{pass_actual}'")
+                                    
+                                    # Lógica de cambio: [numero]pablo -> pablo[numero] y viceversa
+                                    nueva_pass = pass_actual
+                                    if pass_actual.endswith("pablo"):
+                                        numero = pass_actual.replace("pablo", "")
+                                        nueva_pass = f"pablo{numero}"
+                                    elif pass_actual.startswith("pablo"):
+                                        numero = pass_actual.replace("pablo", "")
+                                        nueva_pass = f"{numero}pablo"
+                                    
+                                    if nueva_pass != pass_actual:
+                                        print(f"   Cambiando contraseña a: '{nueva_pass}'")
+                                        input_pass.fill("")
+                                        input_pass.fill(nueva_pass)
+                                        print("   Contraseña rellenada.")
+                                    else:
+                                        print("   No se pudo determinar el formato de la contraseña para cambiarla.")
+                                else:
+                                    print("   No se encontro el campo de contraseña PSK.")
+
+                            except Exception as e:
+                                print(f"   Error al cambiar contraseña: {e}")
+
+                            # 3. Guardar cambios
+                            try:
+                                print("   Buscando boton Guardar...")
+                                boton_guardar = pagina.locator("text=Guardar").first
+                                if boton_guardar.is_visible():
+                                    print("   Haciendo clic en Guardar...")
+                                    boton_guardar.click()
+                                    pagina.wait_for_timeout(3000)
+                                    print("   Cambios guardados correctamente.")
+                                else:
+                                    print("   Boton Guardar no encontrado.")
+                            except Exception as e:
+                                print(f"   Error al guardar: {e}")
 
                             actualizar_apartamento(depto["_id"], {
-                                "steps": "Proceso de seleccion de Canal 6 finalizado",
+                                "steps": "Rotacion de canal y cambio de clave finalizados",
                                 "status": True
                             })
-                            # Esperar un poco para que el usuario vea la página
                             pagina.wait_for_timeout(2000)
                         else:
                             print("   No se pudo encontrar el link a INALAMBRICO")
