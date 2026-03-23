@@ -196,8 +196,16 @@ def main():
                                 
                                 print(f"   Canal actual: '{valor_actual}'")
                                 
-                                # El usuario solicita que siempre se cambie al canal 6
-                                nuevo_canal = "6 /"
+                                # Rotación circular: 1 -> 6 -> 11 -> 1
+                                nuevo_canal = "1 /" # Valor por defecto seguro
+                                if "11 /" in valor_actual:
+                                    nuevo_canal = "1 /"
+                                elif "1 /" in valor_actual:
+                                    nuevo_canal = "6 /"
+                                elif "6 /" in valor_actual:
+                                    nuevo_canal = "11 /"
+                                else:
+                                    nuevo_canal = "1 /" # Fallback a 1 si el canal actual es Auto u otro
                                 
                                 print(f"   Objetivo: Seleccionar '{nuevo_canal}'")
                                 
