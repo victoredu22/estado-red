@@ -179,20 +179,24 @@ def main():
                             
                             # 1. Rotación de Canal
                             try:
+                                print("   Verificando si es necesario habilitar 'Cambio de Canal'...")
+                                # Algunos equipos Pharos requieren marcar este checkbox para editar el canal
+                                checkbox_canal = pagina.locator("label:has-text('Cambio de Canal')").locator("xpath=../..//input[@type='checkbox']").first
+                                if checkbox_canal.is_visible() and not checkbox_canal.is_checked():
+                                    print("   Marcando el checkbox 'Cambio de Canal'...")
+                                    checkbox_canal.click()
+                                    pagina.wait_for_timeout(1000)
+                                
                                 print("   Detectando canal actual...")
-                                # Selectores basados en el HTML enviado por el usuario
                                 container = pagina.locator("#wl-basic-ap-channel")
                                 input_text = container.locator("input.combobox-text")
                                 valor_actual = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
-                                
-                                # Si el input esta vacio, intentamos con el span o texto visible
                                 if not valor_actual:
                                     valor_actual = container.inner_text().strip()
                                 
-                                print(f"   Canal actual detectado: '{valor_actual}'")
+                                print(f"   Canal actual: '{valor_actual}'")
                                 
-                                # Definir la rotación: 1 -> 6 -> 11 -> 1
-                                nuevo_canal = "6 /" # Por defecto
+                                nuevo_canal = "6 /"
                                 if "6 /" in valor_actual:
                                     nuevo_canal = "11 /"
                                 elif "11 /" in valor_actual:
@@ -204,44 +208,36 @@ def main():
                                 
                                 # Abrir el menu: Clic en el switch (.combobox-switch)
                                 switch = container.locator(".combobox-switch")
-                                print("   Abriendo el menu (click en switch)...")
                                 switch.click()
                                 pagina.wait_for_timeout(2000)
                                 
-                                # Buscar la opcion LI. En Pharos, suelen ser li.combobox-list-item o similares
-                                # Usamos un selector que busque en toda la pagina ya que el menu suele estar al final del body
+                                # Intentamos varios selectores para la opcion
                                 selector_li = f"li:has-text('{nuevo_canal}')"
-                                opcion = pagina.locator(selector_li).last
+                                if not pagina.locator(selector_li).last.is_visible():
+                                    selector_li = f"li.combobox-list-item:has-text('{nuevo_canal}')"
                                 
+                                opcion = pagina.locator(selector_li).last
                                 if opcion.is_visible():
-                                    print(f"   Opcion visible: '{opcion.inner_text().strip()}'. Intentando seleccion hibrida...")
-                                    
-                                    # Metodo 1: Hover + Click forzado
-                                    opcion.hover()
-                                    pagina.wait_for_timeout(500)
+                                    print(f"   Haciendo clic en la opcion: '{opcion.inner_text().strip()}'")
+                                    # Intentamos Metodo 1: Clic estandar
                                     opcion.click(force=True)
-                                    pagina.wait_for_timeout(1500)
+                                    pagina.wait_for_timeout(2000)
                                     
-                                    # Verificar si cambio el valor
+                                    # Verificacion
                                     valor_ahora = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
-                                    if nuevo_canal in valor_ahora:
-                                        print(f"   Exito: Canal cambiado a {valor_ahora}")
+                                    if nuevo_canal not in valor_ahora:
+                                        print("   No cambio el valor con click estandar. Intentando Metodo 2: Evaluate JS Click...")
+                                        opcion.evaluate("node => node.click()")
+                                        pagina.wait_for_timeout(2000)
+                                    
+                                    # Verificacion Final
+                                    valor_final = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
+                                    if nuevo_canal in valor_final:
+                                        print(f"   Exito: Canal cambiado a {valor_final}")
                                     else:
-                                        print(f"   No cambio el valor. Intentando Metodo 2: Hover + Enter...")
-                                        opcion.hover()
-                                        pagina.keyboard.press("Enter")
-                                        pagina.wait_for_timeout(1500)
-                                        
-                                        valor_ahora_teclado = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
-                                        if nuevo_canal in valor_ahora_teclado:
-                                            print(f"   Exito por teclado: Canal cambiado a {valor_ahora_teclado}")
-                                        else:
-                                            print(f"   No se pudo cambiar el canal. Valor final: '{valor_ahora_teclado}'")
+                                        print(f"   Fallo final: No se pudo cambiar el canal. Valor actual: '{valor_final}'")
                                 else:
-                                    print(f"   La opcion '{nuevo_canal}' no es visible en el menu desplegable.")
-                                    # Listar lo que hay para depurar
-                                    opciones_total = pagina.locator("li:visible").all_inner_texts()
-                                    print(f"   Elementos de lista visibles en la pagina: {opciones_total[:10]}")
+                                    print(f"   Error: No se visualiza la opcion '{nuevo_canal}' en el menu desplegable.")
 
                             except Exception as e:
                                 print(f"   Error critico al rotar canal: {e}")
