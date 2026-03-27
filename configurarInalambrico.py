@@ -41,6 +41,18 @@ def actualizar_apartamento(api_mongo_id, data):
         print(f"   Error al actualizar API: {e}")
         return None
 
+def actualizar_password_local(api_mongo_id, password_local):
+    """Actualiza la passwordLocal de un apartamento en el API"""
+    try:
+        url = f"{api_url}/apartment/{api_mongo_id}/password-local"
+        print(f"   Actualizando passwordLocal API ({api_mongo_id}): {password_local}")
+        response = requests.post(url, json={"passwordLocal": password_local})
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"   Error al actualizar passwordLocal API: {e}")
+        return None
+
 # =====================
 # MAIN
 # =====================
@@ -177,6 +189,9 @@ def main():
                             
                             input_pass.fill("")
                             input_pass.type(nueva_pass, delay=100)
+                            
+                            # Guardar en base de datos mongo
+                            actualizar_password_local(depto["_id"], nueva_pass)
                         
                         # 3. Guardar cambios
                         boton_aplicar = pagina.locator("div.button-wrap a.button-button:has-text('Aplicar')")
