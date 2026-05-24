@@ -99,11 +99,30 @@ def main():
                     # El timeout es de 30 segundos, si el router está caído lanzará TimeoutError o net::ERR_CONNECTION_TIMED_OUT
                     pagina.goto(depto["url"], timeout=30000)
                     
-                    print(f"   [ÉXITO] Se pudo establecer conexión con la URL.")
-                    actualizar_apartamento(depto["_id"], {
-                        "steps": "Conexión exitosa",
-                        "status": True
-                    })
+                    print("   Iniciando sesión...")
+                    pagina.locator("input[type='text']").nth(0).fill(depto["user"])
+                    pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+                    
+                    try:
+                        # Intentar clic en Acceder
+                        pagina.locator("text=Acceder").nth(1).click()
+                        pagina.wait_for_timeout(3000)
+                    except Exception as e:
+                        raise Exception("Fallo en el botón de inicio de sesión o timeout")
+
+                    # Verificar si el login fue exitoso comprobando si sigue en la pantalla de login
+                    if pagina.url.endswith("/login") or "login" in pagina.title().lower():
+                        print("   [ERROR] Credenciales incorrectas.")
+                        actualizar_apartamento(depto["_id"], {
+                            "steps": "Fallo: Credenciales incorrectas",
+                            "status": False
+                        })
+                    else:
+                        print(f"   [ÉXITO] Conexión y login exitosos.")
+                        actualizar_apartamento(depto["_id"], {
+                            "steps": "Conexión y login exitosos",
+                            "status": True
+                        })
                 except Exception as e:
                     print(f"   [ERROR] No se pudo conectar a la URL: {e}")
                     actualizar_apartamento(depto["_id"], {
