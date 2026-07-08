@@ -19,38 +19,26 @@ api_url = os.getenv("API_APARTMENTS_URL")
 # FUNCIONES API
 # =====================
 def obtener_apartamentos():
-    """Obtiene la lista de todos los apartamentos desde el API"""
+    """Obtiene la lista de todos los routers desde el API"""
     try:
-        url = f"{api_url}/apartment/all"
+        url = f"{api_url}/room-routers"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al obtener apartamentos: {e}")
+        print(f"Error al obtener routers: {e}")
         return []
 
 def actualizar_apartamento(api_mongo_id, data):
-    """Actualiza un apartamento en el API usando su ID de MongoDB (_id)"""
+    """Actualiza un router en el API usando su ID de MongoDB (_id)"""
     try:
-        url = f"{api_url}/apartment/{api_mongo_id}"
+        url = f"{api_url}/room-routers/{api_mongo_id}"
         print(f"   Actualizando API ({api_mongo_id}): {data}")
         response = requests.patch(url, json=data)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
         print(f"   Error al actualizar API: {e}")
-        return None
-
-def actualizar_password_local(api_mongo_id, password_local):
-    """Actualiza la passwordLocal de un apartamento en el API"""
-    try:
-        url = f"{api_url}/apartment/{api_mongo_id}/password-local"
-        print(f"   Actualizando passwordLocal API ({api_mongo_id}): {password_local}")
-        response = requests.post(url, json={"passwordLocal": password_local})
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        print(f"   Error al actualizar passwordLocal API: {e}")
         return None
 
 # =====================
@@ -60,63 +48,67 @@ def main():
     print("Iniciando script de navegacion a seccion Inalambrico...")
     
     try:
-        # 1. Obtener todos los apartamentos
-        todos_apartamentos = obtener_apartamentos()
-        if not todos_apartamentos:
-            print("Error: No se pudieron obtener los apartamentos de la API.")
+        # 1. Obtener todos los routers
+        todos_routers = obtener_apartamentos()
+        if not todos_routers:
+            print("Error: No se pudieron obtener los routers de la API.")
             return
 
         # 2. Determinar cuáles procesar
-        target_apartamentos = []
+        target_routers = []
         if len(sys.argv) >= 2:
             param_buscado = sys.argv[1]
             try:
                 # Intentar buscar por ID numérico exacto
                 id_num = int(param_buscado)
-                target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_num]
+                target_routers = [d for d in todos_routers if d.get("apartmentId", {}).get("id") == id_num]
             except ValueError:
                 pass
             
             # Si no se encontró por ID o el parámetro no era un número, buscar por nombre
-            if not target_apartamentos:
-                # Buscamos departamentos cuyo nombre contenga el número o sea el número exacto
-                target_apartamentos = [
-                    d for d in todos_apartamentos 
-                    if param_buscado.lower() in d.get("name", "").lower() or 
-                       (str(d.get("id")) == param_buscado)
+            if not target_routers:
+                target_routers = [
+                    d for d in todos_routers 
+                    if param_buscado.lower() in d.get("apartmentId", {}).get("name", "").lower() or 
+                       (str(d.get("apartmentId", {}).get("id")) == param_buscado)
                 ]
             
-            if not target_apartamentos:
+            if not target_routers:
                 print(f"Error: No se encontró el departamento relacionado con: '{param_buscado}'")
                 return
             
             # Match más preciso
-            if len(target_apartamentos) > 1:
-                match_exacto = [d for d in target_apartamentos if d.get("name", "").lower() == param_buscado.lower()]
+            if len(target_routers) > 1:
+                match_exacto = [d for d in target_routers if d.get("apartmentId", {}).get("name", "").lower() == param_buscado.lower()]
                 if match_exacto:
-                    target_apartamentos = match_exacto
+                    target_routers = match_exacto
                 else:
-                    match_espacio = [d for d in target_apartamentos if f" {param_buscado}" in d.get("name", "")]
+                    match_espacio = [d for d in target_routers if f" {param_buscado}" in d.get("apartmentId", {}).get("name", "")]
                     if match_espacio:
-                        target_apartamentos = [match_espacio[0]]
+                        target_routers = [match_espacio[0]]
                     else:
-                        target_apartamentos = [target_apartamentos[0]]
+                        target_routers = [target_routers[0]]
             
-            print(f"Objetivo: {target_apartamentos[0]['name']} (ID: {target_apartamentos[0]['id']})")
+            apt_info = target_routers[0].get("apartmentId") or {}
+            print(f"Objetivo: {apt_info.get('name')} (ID: {apt_info.get('id')})")
         else:
             print("No se especificó un departamento.")
             return
 
         # 3. Iniciar Playwright
         with sync_playwright() as p:
-            for depto in target_apartamentos:
-                print(f"Procesando: {depto['name']} (ID: {depto['id']})")
-                num_depto = "".join(filter(str.isdigit, depto["name"]))
+            for depto in target_routers:
+                apt_info = depto.get("apartmentId") or {}
+                apt_name = apt_info.get("name", "Desconocido")
+                apt_id = apt_info.get("id", "N/A")
+                
+                print(f"Procesando: {apt_name} (ID: {apt_id})")
+                num_depto = "".join(filter(str.isdigit, apt_name))
                 if not num_depto:
-                    num_depto = str(depto["id"])
+                    num_depto = str(apt_id)
                 
                 actualizar_apartamento(depto["_id"], {
-                    "steps": f"Iniciando configuracion de {depto['name']}",
+                    "steps": f"Iniciando configuracion de {apt_name}",
                     "status": True
                 })
 
@@ -190,8 +182,8 @@ def main():
                             input_pass.fill("")
                             input_pass.type(nueva_pass, delay=100)
                             
-                            # Guardar en base de datos mongo
-                            actualizar_password_local(depto["_id"], nueva_pass)
+                            # Guardar en base de datos mongo haciendo PATCH al room-router
+                            actualizar_apartamento(depto["_id"], {"passwordLocal": nueva_pass})
                         
                         # 3. Guardar cambios
                         boton_aplicar = pagina.locator("div.button-wrap a.button-button:has-text('Aplicar')")

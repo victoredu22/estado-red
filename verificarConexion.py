@@ -18,20 +18,20 @@ api_url = os.getenv("API_APARTMENTS_URL")
 # FUNCIONES API
 # =====================
 def obtener_apartamentos():
-    """Obtiene la lista de todos los apartamentos desde el API"""
+    """Obtiene la lista de todos los routers de la API"""
     try:
-        url = f"{api_url}/apartment/all"
+        url = f"{api_url}/room-routers"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al obtener apartamentos: {e}")
+        print(f"Error al obtener routers: {e}")
         return []
 
 def actualizar_apartamento(api_mongo_id, data):
-    """Actualiza un apartamento en el API usando su ID de MongoDB (_id)"""
+    """Actualiza un router en el API usando su ID de MongoDB (_id)"""
     try:
-        url = f"{api_url}/apartment/{api_mongo_id}"
+        url = f"{api_url}/room-routers/{api_mongo_id}"
         print(f"   Actualizando API ({api_mongo_id}): {data}")
         response = requests.patch(url, json=data)
         response.raise_for_status()
@@ -47,56 +47,60 @@ def main():
     print("Iniciando script de verificación de conexión...")
     
     try:
-        # 1. Obtener todos los apartamentos
-        todos_apartamentos = obtener_apartamentos()
-        if not todos_apartamentos:
-            print("Error: No se pudieron obtener los apartamentos de la API.")
+        # 1. Obtener todos los routers
+        todos_routers = obtener_apartamentos()
+        if not todos_routers:
+            print("Error: No se pudieron obtener los routers de la API.")
             return
 
         # 2. Determinar cuáles procesar
-        target_apartamentos = []
+        target_routers = []
         if len(sys.argv) >= 2:
             param_buscado = sys.argv[1]
             try:
                 id_num = int(param_buscado)
-                target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_num]
+                target_routers = [d for d in todos_routers if d.get("apartmentId", {}).get("id") == id_num]
             except ValueError:
                 pass
             
-            if not target_apartamentos:
-                target_apartamentos = [
-                    d for d in todos_apartamentos 
-                    if param_buscado.lower() in d.get("name", "").lower() or 
-                       (str(d.get("id")) == param_buscado)
+            if not target_routers:
+                target_routers = [
+                    d for d in todos_routers 
+                    if param_buscado.lower() in d.get("apartmentId", {}).get("name", "").lower() or 
+                       (str(d.get("apartmentId", {}).get("id")) == param_buscado)
                 ]
             
-            if not target_apartamentos:
-                print(f"Error: No se encontró el departamento relacionado con: '{param_buscado}'")
+            if not target_routers:
+                print(f"Error: No se encontró el apartamento relacionado con: '{param_buscado}'")
                 return
             
-            print(f"Objetivo único: {target_apartamentos[0]['name']} (ID: {target_apartamentos[0]['id']})")
+            apt_info = target_routers[0].get("apartmentId") or {}
+            print(f"Objetivo único: {apt_info.get('name')} (ID: {apt_info.get('id')})")
         else:
             # Si no se pasan argumentos, procesamos todos los activos
-            target_apartamentos = [d for d in todos_apartamentos if d.get("active")]
-            print(f"No se especificó un departamento. Se procesarán {len(target_apartamentos)} departamentos activos.")
+            target_routers = [d for d in todos_routers if d.get("active")]
+            print(f"No se especificó un departamento. Se procesarán {len(target_routers)} routers activos.")
 
         # 3. Iniciar Playwright
         with sync_playwright() as p:
-            for depto in target_apartamentos:
-                print(f"\nProcesando: {depto['name']} (ID: {depto['id']})")
+            for depto in target_routers:
+                apt_info = depto.get("apartmentId") or {}
+                apt_name = apt_info.get("name", "Desconocido")
+                apt_id = apt_info.get("id", "N/A")
+                
+                print(f"\nProcesando: {apt_name} (ID: {apt_id})")
                 
                 actualizar_apartamento(depto["_id"], {
                     "steps": f"Verificando conexión...",
                     "status": False
                 })
 
-                navegador = p.chromium.launch(headless=False) # Cambia a True si quieres que corra oculto
+                navegador = p.chromium.launch(headless=False)
                 try:
                     contexto = navegador.new_context(ignore_https_errors=True)
                     pagina = contexto.new_page()
 
                     print(f"   Intentando conectar a {depto['url']} ...")
-                    # El timeout es de 30 segundos, si el router está caído lanzará TimeoutError o net::ERR_CONNECTION_TIMED_OUT
                     pagina.goto(depto["url"], timeout=30000)
                     
                     print("   Iniciando sesión...")

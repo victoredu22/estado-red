@@ -14,30 +14,27 @@ api_url = os.getenv("API_APARTMENTS_URL")
 # =====================
 def obtener_apartamentos():
     try:
-        url = f"{api_url}/apartment/all"
+        url = f"{api_url}/room-routers"
         response = requests.get(url)
         print("API URL:", url)
         print("Código de estado:", response.status_code)
-        print("Texto crudo de la respuesta:", response.text)
-
         response.raise_for_status()
         data = response.json()
-        print("JSON decodificado:", data)
         return data
     except requests.RequestException as e:
-        print(f"Error al obtener apartamentos: {e}")
+        print(f"Error al obtener routers: {e}")
         return []
 
 
 def actualizar_apartamento(apartamento_id, data):
     try:
-        url = f"{api_url}/apartment/{apartamento_id}"
+        url = f"{api_url}/room-routers/{apartamento_id}"
         print(f"Enviando PATCH a {url} con data: {data}")
         response = requests.patch(url, json=data)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al actualizar apartamento: {e}")
+        print(f"Error al actualizar router: {e}")
         return None
 
 
@@ -46,14 +43,17 @@ def actualizar_apartamento(apartamento_id, data):
 # =====================
 def main():
     try:
-        apartamentos = obtener_apartamentos()
+        routers = obtener_apartamentos()
 
         with sync_playwright() as p:
-            for depto in apartamentos:
+            for depto in routers:
                 if depto["active"]:
                     navegador = p.chromium.launch(headless=False)
                     contexto = navegador.new_context(ignore_https_errors=True)
                     pagina = contexto.new_page()
+
+                    apt_info = depto.get("apartmentId") or {}
+                    apt_name = apt_info.get("name", "Desconocido")
 
                     # Resetear intentos
                     actualizar_apartamento(depto["_id"], {
@@ -72,7 +72,7 @@ def main():
                                 "status": False,
                                 "steps": "fallo la url del depto"
                             })
-                            print(f"[OK] No se pudo conectar a {depto['name']} ({depto['url']}): {e}")
+                            print(f"[OK] No se pudo conectar a {apt_name} ({depto['url']}): {e}")
                             navegador.close()
                             continue
 
@@ -82,7 +82,7 @@ def main():
                         try:
                             pagina.locator("text=Acceder").nth(1).click()
                         except Exception as e:
-                            print(f"[ERROR] No se pudo hacer clic en Acceder en {depto['name']}: {e}")
+                            print(f"[ERROR] No se pudo hacer clic en Acceder en {apt_name}: {e}")
                             intentosDepto = depto["attempts"]
                             actualizar_apartamento(depto["_id"], {
                                 "attempts": intentosDepto + 1,
@@ -96,7 +96,7 @@ def main():
                             pagina.wait_for_selector("#lan-info-ip", timeout=5000)
                             if pagina.locator("#lan-info-ip").is_visible():
                                 ip_texto = pagina.locator("#lan-info-ip pre").inner_text()
-                                print(f"[OK] IP encontrada en {depto['name']}: {ip_texto}")
+                                print(f"[OK] IP encontrada en {apt_name}: {ip_texto}")
                                 intentosDepto = depto["attempts"]
                                 actualizar_apartamento(depto["_id"], {
                                     "attempts": intentosDepto + 1,
@@ -104,10 +104,10 @@ def main():
                                     "steps": "ningun error en el checkeo"
                                 })
                             else:
-                                print(f"[ERROR] Se ingresó, pero no se encontró la IP en {depto['name']}.")
+                                print(f"[ERROR] Se ingresó, pero no se encontró la IP en {apt_name}.")
                         except TimeoutError:
                             if pagina.url.endswith("/login") or "login" in pagina.title().lower():
-                                print(f"[WARN] Credenciales incorrectas para {depto['name']}.")
+                                print(f"[WARN] Credenciales incorrectas para {apt_name}.")
                                 intentosDepto = depto["attempts"]
                                 actualizar_apartamento(depto["_id"], {
                                     "attempts": intentosDepto + 1,
@@ -115,7 +115,7 @@ def main():
                                     "steps": "credenciales incorrectas login"
                                 })
                             else:
-                                print(f"[ERROR] No se encontró la IP. Timeout en {depto['name']}.")
+                                print(f"[ERROR] No se encontró la IP. Timeout en {apt_name}.")
                         pagina.wait_for_timeout(3000)
 
                     finally:

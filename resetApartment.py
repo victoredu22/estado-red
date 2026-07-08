@@ -14,27 +14,27 @@ api_url = os.getenv("API_APARTMENTS_URL")
 # FUNCIONES API
 # =====================
 def obtener_apartamentos():
+    """Obtiene la lista de todos los routers desde el API"""
     try:
-        url = f"{api_url}/apartment/all"
+        url = f"{api_url}/room-routers"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al obtener apartamentos: {e}")
+        print(f"Error al obtener routers: {e}")
         return []
 
-
-def actualizar_apartamento(apartamento_id, data):
+def actualizar_apartamento(api_mongo_id, data):
+    """Actualiza un router en el API usando su ID de MongoDB (_id)"""
     try:
-        url = f"{api_url}/apartment/{apartamento_id}"
+        url = f"{api_url}/room-routers/{api_mongo_id}"
         print(f"Enviando PATCH a {url} con data: {data}")
         response = requests.patch(url, json=data)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al actualizar apartamento: {e}")
+        print(f"Error al actualizar router: {e}")
         return None
-
 
 # =====================
 # MAIN
@@ -47,27 +47,30 @@ def main():
         return
 
     id_depto = int(sys.argv[1])
-    print(f"🔍 Buscando departamento con id: {id_depto}...")
+    print(f"🔍 Buscando router del departamento con id: {id_depto}...")
 
     try:
-        apartamentos = obtener_apartamentos()
+        routers = obtener_apartamentos()
 
-        # Buscar el departamento específico por su id
+        # Buscar el router específico por el id de su apartamento
         depto_encontrado = None
-        for depto in apartamentos:
-            if depto.get("id") == id_depto:
+        for depto in routers:
+            if depto.get("apartmentId", {}).get("id") == id_depto:
                 depto_encontrado = depto
                 break
 
         if not depto_encontrado:
-            print(f"❌ No se encontró el departamento con id: {id_depto}")
+            print(f"❌ No se encontró el router para el departamento con id: {id_depto}")
             return
+
+        apt_info = depto_encontrado.get("apartmentId") or {}
+        apt_name = apt_info.get("name", "Desconocido")
 
         if not depto_encontrado.get("active"):
-            print(f"⚠️ El departamento {depto_encontrado['name']} (id: {id_depto}) no está activo")
+            print(f"⚠️ El router del departamento {apt_name} (id: {id_depto}) no está activo")
             return
 
-        print(f"✅ Departamento encontrado: {depto_encontrado['name']}")
+        print(f"✅ Router encontrado para el departamento: {apt_name}")
 
         with sync_playwright() as p:
             navegador = p.chromium.launch(headless=False)
@@ -78,7 +81,7 @@ def main():
                 try:
                     pagina.goto(depto_encontrado["url"])
                 except Exception as e:
-                    print(f"❌ No se pudo conectar a {depto_encontrado['name']} ({depto_encontrado['url']}): {e}")
+                    print(f"❌ No se pudo conectar a {apt_name} ({depto_encontrado['url']}): {e}")
                     navegador.close()
                     return
 
@@ -88,7 +91,7 @@ def main():
                 try:
                     pagina.locator("text=Acceder").nth(1).click()
                 except Exception as e:
-                    print(f"❌ No se pudo hacer clic en Acceder en {depto_encontrado['name']}: {e}")
+                    print(f"❌ No se pudo hacer clic en Acceder en {apt_name}: {e}")
                     navegador.close()
                     return
 
@@ -97,11 +100,11 @@ def main():
 
                 # Verificar si el login fue exitoso
                 if pagina.url.endswith("/login") or "login" in pagina.title().lower():
-                    print(f"⚠️ Credenciales incorrectas para {depto_encontrado['name']}.")
+                    print(f"⚠️ Credenciales incorrectas para {apt_name}.")
                     navegador.close()
                     return
 
-                print(f"✅ Login exitoso en {depto_encontrado['name']}")
+                print(f"✅ Login exitoso en {apt_name}")
 
                 # Navegar a la sección SISTEMA
                 try:
@@ -125,11 +128,9 @@ def main():
                 # Identificar y marcar los botones Reiniciar
                 try:
                     print("🔄 Buscando botones tipo enlace con clase 'button-button'...")
-                    # Los botones son enlaces <a> con clase button-button
                     botones = pagina.locator("a.button-button").all()
                     print(f"   Total de botones encontrados: {len(botones)}")
 
-                    # Buscar específicamente botones que contengan "Reiniciar"
                     botones_reiniciar = []
                     for i, boton in enumerate(botones):
                         texto = boton.inner_text()
@@ -149,8 +150,6 @@ def main():
                         # Buscar el modal de confirmación
                         try:
                             print("\n🔍 Buscando modal de confirmación...")
-
-                            # Buscar si existe un elemento con texto "Configuración"
                             tiene_configuracion = False
                             tiene_reinicializar = False
 
@@ -162,7 +161,6 @@ def main():
                             except:
                                 print("❌ NO se encontró 'Configuración' en el modal")
 
-                            # Buscar si existe un elemento con texto "reinicializar"
                             try:
                                 reinicializar = pagina.locator("text=/reinicializar/i").first
                                 if reinicializar.is_visible():
@@ -195,11 +193,7 @@ def main():
                                         # Esperar 2 minutos mientras el dispositivo se reinicia
                                         try:
                                             print("\n⏳ Esperando 2 minutos para el reinicio del dispositivo...")
-                                            print("   (El modal se cerrará automáticamente cuando termine)")
-
-                                            # Esperar 2 minutos (120 segundos)
                                             pagina.wait_for_timeout(120000)
-
                                             print("\n✅ Tiempo de espera completado (2 minutos)")
                                             print("🎉 Proceso de reinicio completado exitosamente")
                                             return
@@ -207,7 +201,6 @@ def main():
                                             print(f"   ⚠️ Error durante la espera: {e}")
                                             print("\n🎉 Proceso completado")
                                             return
-
                                     else:
                                         print("❌ El botón 'Sí' no está visible")
                                 except Exception as e:
@@ -235,9 +228,5 @@ def main():
     except Exception as e:
         print(f"❌ Error general: {e}")
 
-
-# =====================
-# RUN
-# =====================
 if __name__ == "__main__":
     main()

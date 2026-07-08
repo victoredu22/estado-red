@@ -19,20 +19,20 @@ api_url = os.getenv("API_APARTMENTS_URL")
 # FUNCIONES API
 # =====================
 def obtener_apartamentos():
-    """Obtiene la lista de todos los apartamentos desde el API"""
+    """Obtiene la lista de todos los routers desde el API"""
     try:
-        url = f"{api_url}/apartment/all"
+        url = f"{api_url}/room-routers"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al obtener apartamentos: {e}")
+        print(f"Error al obtener routers: {e}")
         return []
 
 def actualizar_apartamento(api_mongo_id, data):
-    """Actualiza un apartamento en el API usando su ID de MongoDB (_id)"""
+    """Actualiza un router en el API usando su ID de MongoDB (_id)"""
     try:
-        url = f"{api_url}/apartment/{api_mongo_id}"
+        url = f"{api_url}/room-routers/{api_mongo_id}"
         print(f"   Actualizando API ({api_mongo_id}): {data}")
         response = requests.patch(url, json=data)
         response.raise_for_status()
@@ -48,75 +48,75 @@ def main():
     print("Iniciando script de navegacion a seccion Inalambrico...")
     
     try:
-        # 1. Obtener todos los apartamentos
-        todos_apartamentos = obtener_apartamentos()
-        if not todos_apartamentos:
-            print("Error: No se pudieron obtener los apartamentos de la API.")
+        # 1. Obtener todos los routers
+        todos_routers = obtener_apartamentos()
+        if not todos_routers:
+            print("Error: No se pudieron obtener los routers de la API.")
             return
 
         # 2. Determinar cuáles procesar
-        target_apartamentos = []
+        target_routers = []
         if len(sys.argv) >= 2:
             param_buscado = sys.argv[1]
             try:
                 # Intentar buscar por ID numérico exacto
                 id_num = int(param_buscado)
-                target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_num]
+                target_routers = [d for d in todos_routers if d.get("apartmentId", {}).get("id") == id_num]
             except ValueError:
                 pass
             
             # Si no se encontró por ID o el parámetro no era un número, buscar por nombre
-            if not target_apartamentos:
-                # Buscamos departamentos cuyo nombre contenga el número o sea el número exacto
-                # Ej: "Depto 1" contiene "1"
-                # O si el usuario puso "Depto 1" completo
-                target_apartamentos = [
-                    d for d in todos_apartamentos 
-                    if param_buscado.lower() in d.get("name", "").lower() or 
-                       (str(d.get("id")) == param_buscado)
+            if not target_routers:
+                target_routers = [
+                    d for d in todos_routers 
+                    if param_buscado.lower() in d.get("apartmentId", {}).get("name", "").lower() or 
+                       (str(d.get("apartmentId", {}).get("id")) == param_buscado)
                 ]
             
-            if not target_apartamentos:
+            if not target_routers:
                 print(f"Error: No se encontró el departamento relacionado con: '{param_buscado}'")
                 return
             
-            # Si hay más de uno (ej: "1" en "Depto 1" y "Depto 11"), intentamos el match más corto o exacto
-            if len(target_apartamentos) > 1:
-                # Filtramos por el nombre exacto si existe
-                match_exacto = [d for d in target_apartamentos if d.get("name", "").lower() == param_buscado.lower()]
+            # Match más preciso
+            if len(target_routers) > 1:
+                match_exacto = [d for d in target_routers if d.get("apartmentId", {}).get("name", "").lower() == param_buscado.lower()]
                 if match_exacto:
-                    target_apartamentos = match_exacto
+                    target_routers = match_exacto
                 else:
-                    # O el que contenga el número con un espacio, ej: "Depto 1"
-                    match_espacio = [d for d in target_apartamentos if f" {param_buscado}" in d.get("name", "")]
+                    match_espacio = [d for d in target_routers if f" {param_buscado}" in d.get("apartmentId", {}).get("name", "")]
                     if match_espacio:
-                        target_apartamentos = [match_espacio[0]]
+                        target_routers = [match_espacio[0]]
                     else:
-                        target_apartamentos = [target_apartamentos[0]] # Tomamos el primero
+                        target_routers = [target_routers[0]]
             
-            print(f"Objetivo: {target_apartamentos[0]['name']} (ID: {target_apartamentos[0]['id']})")
+            apt_info = target_routers[0].get("apartmentId") or {}
+            print(f"Objetivo: {apt_info.get('name')} (ID: {apt_info.get('id')})")
         else:
-            # Procesar todos los activos si no se especifica uno (opcional, el usuario dijo que ahora seria especifico)
             print("No se especificó un departamento. Listando opciones disponibles (IDs):")
-            activos = [d for d in todos_apartamentos if d.get("active")]
+            activos = [d for d in todos_routers if d.get("active")]
             for a in activos:
-                print(f" - {a['id']}: {a['name']}")
+                a_apt = a.get("apartmentId") or {}
+                print(f" - {a_apt.get('id')}: {a_apt.get('name')}")
             print("\nUso: py configurarInalambrico.py <numero_depto>")
             return
 
         # 3. Iniciar Playwright
         with sync_playwright() as p:
-            for depto in target_apartamentos:
-                print(f"Procesando: {depto['name']} (ID: {depto['id']})")
+            for depto in target_routers:
+                apt_info = depto.get("apartmentId") or {}
+                apt_name = apt_info.get("name", "Desconocido")
+                apt_id = apt_info.get("id", "N/A")
+                
+                print(f"Procesando: {apt_name} (ID: {apt_id})")
                 
                 # Extraer numero del departamento para la contraseña
-                num_depto = "".join(filter(str.isdigit, depto["name"]))
+                num_depto = "".join(filter(str.isdigit, apt_name))
                 if not num_depto:
-                    num_depto = str(depto["id"])
+                    num_depto = str(apt_id)
                 
                 # Reseteamos status/steps al iniciar
                 actualizar_apartamento(depto["_id"], {
-                    "steps": f"Iniciando configuracion de {depto['name']}",
+                    "steps": f"Iniciando configuracion de {apt_name}",
                     "status": True
                 })
 
@@ -159,8 +159,6 @@ def main():
                     # Navegar a INALAMBRICO
                     try:
                         print("   Buscando sección INALAMBRICO...")
-                        
-                        # Probamos varios selectores comunes
                         selectores = [
                             "span.sub-navigator-text:has-text('INALAMBRICO')",
                             "span.sub-navigator-text:has-text('INALÁMBRICO')",
@@ -185,7 +183,6 @@ def main():
                             # 1. Rotación de Canal
                             try:
                                 print("   Verificando si es necesario habilitar 'Cambio de Canal'...")
-                                # Algunos equipos Pharos requieren marcar este checkbox para editar el canal
                                 checkbox_canal = pagina.locator("label:has-text('Cambio de Canal')").locator("xpath=../..//input[@type='checkbox']").first
                                 if checkbox_canal.is_visible() and not checkbox_canal.is_checked():
                                     print("   Marcando el checkbox 'Cambio de Canal'...")
@@ -203,55 +200,38 @@ def main():
                                 
                                 # Rotación circular: 11 -> 1 -> 6 -> 11
                                 nuevo_canal_prefix = "1 /"
-                                if "11 /" in valor_actual:
-                                    nuevo_canal_prefix = "1 /"
-                                elif "1 /" in valor_actual:
-                                    nuevo_canal_prefix = "6 /"
-                                elif "6 /" in valor_actual:
-                                    nuevo_canal_prefix = "11 /"
+                                if "11 /" in valor_actual: nuevo_canal_prefix = "1 /"
+                                elif "1 /" in valor_actual: nuevo_canal_prefix = "6 /"
+                                elif "6 /" in valor_actual: nuevo_canal_prefix = "11 /"
                                 
                                 print(f"   Objetivo: Seleccionar canal que empiece con '{nuevo_canal_prefix}'")
                                 
-                                # Abrir el menu
                                 container.locator(".combobox-switch").click()
                                 pagina.wait_for_timeout(2000)
-                                
-                                # Selector preciso usando REGEX para evitar que '11' coincida con '1'
-                                # Buscamos LIs que EMPIECEN exactamente con el prefijo deseado
                                 regex_selector = re.compile(f"^{re.escape(nuevo_canal_prefix)}")
                                 opcion = pagina.locator("li").filter(has_text=regex_selector).last
                                 
                                 if opcion.is_visible():
                                     texto_opcion = opcion.inner_text().strip()
                                     print(f"   Haciendo clic preciso en: '{texto_opcion}'")
-                                    
-                                    # Metodo 1: Clic estandar
                                     opcion.click(force=True)
                                     pagina.wait_for_timeout(2000)
                                     
-                                    # Verificacion
                                     valor_final = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
                                     if nuevo_canal_prefix in valor_final:
                                         print(f"   Exito: Canal cambiado a {valor_final}")
                                     else:
-                                        print(f"   No cambio. Intentando Metodo 2: JS evaluate click...")
+                                        print(f"   No cambio. Intentando Metodo JS evaluate click...")
                                         opcion.evaluate("node => node.click()")
                                         pagina.wait_for_timeout(2000)
-                                        valor_final = (input_text.get_attribute("value") or input_text.input_value() or "").strip()
-                                        print(f"   Valor final tras JS: '{valor_final}'")
                                 else:
                                     print(f"   Error: No se encontro ninguna opcion que empiece con '{nuevo_canal_prefix}'")
-                                    # Depuracion: ver que opciones hay
-                                    opciones = pagina.locator("li:visible").all_inner_texts()
-                                    print(f"   Opciones visibles (primeras 5): {opciones[:5]}")
-
                             except Exception as e:
                                 print(f"   Error critico al rotar canal: {e}")
 
                             # 2. Cambio de Contraseña (PSK)
                             try:
                                 print("   Buscando campo de contraseña (PSK)...")
-                                # El contenedor es #wl-ap-wpa-pwd según el HTML del usuario
                                 psk_container = pagina.locator("#wl-ap-wpa-pwd")
                                 input_pass = psk_container.locator("input.password-visible").first
                                 if not input_pass.is_visible():
@@ -262,63 +242,51 @@ def main():
                                 if input_pass and input_pass.is_visible():
                                     pass_actual = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
                                     if not pass_actual:
-                                        # Intentamos leer el texto si el value esta vacio (a veces Pharos lo hace)
                                         pass_actual = psk_container.inner_text().strip().split('\n')[0]
                                     
                                     print(f"   Contraseña actual detectada: '{pass_actual}'")
                                     
-                                    # Lógica de cambio: 319923pablo[num] <-> pablo[num]319923
                                     num_str = str(num_depto)
                                     base_pablo = f"319923pablo{num_str}"
                                     swap_pablo = f"pablo{num_str}319923"
                                     
-                                    nueva_pass = base_pablo # Default
+                                    nueva_pass = base_pablo
                                     if base_pablo in pass_actual:
                                         nueva_pass = swap_pablo
                                     elif swap_pablo in pass_actual:
                                         nueva_pass = base_pablo
                                     
-                                    if nueva_pass != pass_actual or True: # Forzamos escritura para asegurar
-                                        print(f"   Cambiando contraseña a: '{nueva_pass}'")
+                                    print(f"   Cambiando contraseña a: '{nueva_pass}'")
+                                    inputs = psk_container.locator("input").all()
+                                    for inp in inputs:
+                                        try:
+                                            inp.fill("")
+                                            inp.type(nueva_pass, delay=100)
+                                            inp.dispatch_event("input")
+                                            inp.dispatch_event("change")
+                                            inp.dispatch_event("blur")
+                                        except:
+                                            pass
                                         
-                                        # Enfoque robusto: Iterar por todos los inputs del contenedor (oculto y visible)
-                                        inputs = psk_container.locator("input").all()
-                                        for inp in inputs:
-                                            try:
-                                                # Limpiar y escribir con delay para simular usuario real
-                                                inp.fill("")
-                                                inp.type(nueva_pass, delay=100)
-                                                # Disparar eventos críticos para el framework UI
-                                                inp.dispatch_event("input")
-                                                inp.dispatch_event("change")
-                                                inp.dispatch_event("blur")
-                                            except:
-                                                pass
-                                        
-                                        print(f"   Escritura robusta finalizada: '{nueva_pass}'")
-                                        cambio_psk_exitoso = True
+                                    print(f"   Escritura robusta finalizada: '{nueva_pass}'")
                                 else:
-                                    print("   No se encontro el campo de contraseña PSK en #wl-ap-wpa-pwd.")
+                                    print("   No se encontro el campo de contraseña PSK.")
                             except Exception as e:
                                 print(f"   Error al cambiar contraseña: {e}")
 
-                            # 3. Guardar cambios / Aplicar
+                            # 3. Guardar cambios
                             try:
                                 print("   Buscando boton Aplicar...")
-                                # Selector robusto basado en el HTML proporcionado por el usuario
                                 boton_aplicar = pagina.locator("div.button-wrap a.button-button:has-text('Aplicar')")
-                                
                                 if not boton_aplicar.is_visible():
-                                    # Fallback a selectores genéricos si el específico falla
                                     boton_aplicar = pagina.locator("#wireless-submit-button")
                                     if not boton_aplicar.is_visible():
                                         boton_aplicar = pagina.locator("text=Aplicar").first
                                     
                                 if boton_aplicar.is_visible():
-                                    print(f"   Haciendo clic en el boton Aplicar...")
                                     boton_aplicar.scroll_into_view_if_needed()
                                     boton_aplicar.click()
-                                    pagina.wait_for_timeout(5000) # Esperar al reinicio de red si aplica
+                                    pagina.wait_for_timeout(5000)
                                     print("   Cambios aplicados correctamente.")
                                 else:
                                     print("   Boton Aplicar no encontrado.")

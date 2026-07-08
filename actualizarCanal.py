@@ -19,20 +19,20 @@ api_url = os.getenv("API_APARTMENTS_URL")
 # FUNCIONES API
 # =====================
 def obtener_apartamentos():
-    """Obtiene la lista de todos los apartamentos desde el API"""
+    """Obtiene la lista de todos los routers de habitaciones desde el API"""
     try:
-        url = f"{api_url}/apartment/all"
+        url = f"{api_url}/room-routers"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error al obtener apartamentos: {e}")
+        print(f"Error al obtener routers de la API: {e}")
         return []
 
 def actualizar_apartamento(api_mongo_id, data):
-    """Actualiza un apartamento en el API usando su ID de MongoDB (_id)"""
+    """Actualiza un router en el API usando su ID de MongoDB (_id)"""
     try:
-        url = f"{api_url}/apartment/{api_mongo_id}"
+        url = f"{api_url}/room-routers/{api_mongo_id}"
         print(f"   Actualizando API ({api_mongo_id}): {data}")
         response = requests.patch(url, json=data)
         response.raise_for_status()
@@ -48,29 +48,33 @@ def main():
     print("Iniciando script de actualización de canales...")
     
     try:
-        # 1. Obtener todos los apartamentos
-        todos_apartamentos = obtener_apartamentos()
-        if not todos_apartamentos:
-            print("Error: No se pudieron obtener los apartamentos de la API.")
+        # 1. Obtener todos los routers de la API
+        todos_routers = obtener_apartamentos()
+        if not todos_routers:
+            print("Error: No se pudieron obtener los routers de la API.")
             return
 
         # 2. Determinar cuáles procesar
-        target_apartamentos = []
+        target_routers = []
         if len(sys.argv) >= 2:
             id_buscado = int(sys.argv[1])
-            target_apartamentos = [d for d in todos_apartamentos if d.get("id") == id_buscado]
-            if not target_apartamentos:
-                print(f"Error: No se encontró el departamento con ID numérico: {id_buscado}")
+            target_routers = [d for d in todos_routers if d.get("apartmentId", {}).get("id") == id_buscado]
+            if not target_routers:
+                print(f"Error: No se encontró el apartamento con ID numérico: {id_buscado}")
                 return
         else:
             # Procesar todos los activos si no se especifica uno
-            target_apartamentos = [d for d in todos_apartamentos if d.get("active")]
-            print(f"Se procesarán {len(target_apartamentos)} departamentos activos.")
+            target_routers = [d for d in todos_routers if d.get("active")]
+            print(f"Se procesarán {len(target_routers)} routers activos.")
 
         # 3. Iniciar Playwright
         with sync_playwright() as p:
-            for depto in target_apartamentos:
-                print(f"Procesando: {depto['name']} (ID: {depto['id']})")
+            for depto in target_routers:
+                apt_info = depto.get("apartmentId") or {}
+                apt_name = apt_info.get("name", "Desconocido")
+                apt_id = apt_info.get("id", "N/A")
+                
+                print(f"Procesando: {apt_name} (ID: {apt_id})")
                 
                 # Reseteamos status/steps al iniciar
                 actualizar_apartamento(depto["_id"], {
@@ -140,13 +144,19 @@ def main():
                                 if canal_label.is_visible():
                                     canal_valor = canal_label.inner_text().replace("Canal/Frecuencia", "").replace(":", "").strip()
                         except Exception as e:
-                            print(f"   Fallo selector específico: {e}. Probando Regex...")
-                            # Fallback a Regex
-                            texto_completo = pagina.content()
-                            match = re.search(r"Canal/Frecuencia\s*[:]\s*([\w\s\(\)]+)", texto_completo)
-                            if match:
-                                canal_valor = match.group(1).strip()
-                                canal_valor = " ".join(canal_valor.split())
+                            print(f"   Fallo selector específico: {e}")
+
+                        # Fallback a Regex si no se encontró por selectores CSS
+                        if canal_valor == "No encontrado":
+                            try:
+                                print("   No se encontró mediante selectores CSS. Probando Regex...")
+                                texto_completo = pagina.content()
+                                match = re.search(r"Canal/Frecuencia\s*[:]\s*([\w\s\(\)]+)", texto_completo)
+                                if match:
+                                    canal_valor = match.group(1).strip()
+                                    canal_valor = " ".join(canal_valor.split())
+                            except Exception as e:
+                                print(f"   Fallo en la extracción por Regex: {e}")
 
                         print(f"   Canal detectado: {canal_valor}")
                         
