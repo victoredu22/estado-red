@@ -47,16 +47,19 @@ def main():
         routers = obtener_apartamentos()
 
         p = sync_playwright().start()
+        navegadores = []
         
         try:
             for depto in routers:
                 if depto["active"]:
                     navegador = p.chromium.launch(headless=False)
+                    navegadores.append(navegador)
                     contexto = navegador.new_context(ignore_https_errors=True)
                     pagina = contexto.new_page()
 
                     apt_info = depto.get("apartmentId") or {}
                     apt_name = apt_info.get("name", "Desconocido")
+                    depto["name"] = apt_name
 
                     # Resetear intentos
                     actualizar_apartamento(depto["_id"], {
@@ -122,8 +125,10 @@ def main():
                     finally:
                         pass
 
-            while True:
-                time.sleep(60)
+            time.sleep(120)
+            for navegador in navegadores:
+                navegador.close()
+            p.stop()
         finally:
             pass
 
