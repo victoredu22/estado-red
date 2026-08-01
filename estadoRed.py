@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright, TimeoutError
 import requests
 import os
+import time
 from dotenv import load_dotenv
 
 # =====================
@@ -45,7 +46,9 @@ def main():
     try:
         routers = obtener_apartamentos()
 
-        with sync_playwright() as p:
+        p = sync_playwright().start()
+        
+        try:
             for depto in routers:
                 if depto["active"]:
                     navegador = p.chromium.launch(headless=False)
@@ -118,6 +121,11 @@ def main():
                                 print(f"[ERROR] No se encontró la IP. Timeout en {depto['name']}.")
                     finally:
                         pass
+
+            while True:
+                time.sleep(60)
+        finally:
+            pass
 
     except Exception as e:
         print("❌ Error general:", e)
