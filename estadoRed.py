@@ -82,7 +82,7 @@ def main():
                             continue
 
                         pagina.locator("input[type='text']").nth(0).fill(depto["user"])
-                        pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+                        pagina.locator("input[type='password']").nth(0).fill(depto["passwordLocal"])
 
                         try:
                             pagina.locator("text=Acceder").nth(1).click()
