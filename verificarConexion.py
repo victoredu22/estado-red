@@ -131,6 +131,8 @@ def main():
                             "steps": "Conexión y login exitosos",
                             "status": True
                         })
+                        navegadores.remove(navegador)
+                        navegador.close()
                 except Exception as e:
                     print(f"   [ERROR] No se pudo conectar a la URL: {e}")
                     actualizar_apartamento(depto["_id"], {
