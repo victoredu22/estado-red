@@ -73,7 +73,6 @@ def main():
                                 "steps": "fallo la url del depto"
                             })
                             print(f"[OK] No se pudo conectar a {apt_name} ({depto['url']}): {e}")
-                            navegador.close()
                             continue
 
                         pagina.locator("input[type='text']").nth(0).fill(depto["user"])
@@ -89,7 +88,6 @@ def main():
                                 "status": False,
                                 "steps": "fallo credenciales"
                             })
-                            navegador.close()
                             continue
 
                         try:
@@ -116,10 +114,10 @@ def main():
                                 })
                             else:
                                 print(f"[ERROR] No se encontró la IP. Timeout en {apt_name}.")
-                        pagina.wait_for_timeout(3000)
 
+                                print(f"[ERROR] No se encontró la IP. Timeout en {depto['name']}.")
                     finally:
-                        navegador.close()
+                        pass
 
     except Exception as e:
         print("❌ Error general:", e)
