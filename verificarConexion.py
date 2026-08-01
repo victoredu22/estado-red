@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright, TimeoutError
 import requests
 import os
 import sys
+import time
 from dotenv import load_dotenv
 
 # Forzar salida en UTF-8 para evitar errores en terminales Windows
@@ -82,7 +83,9 @@ def main():
             print(f"No se especificó un departamento. Se procesarán {len(target_routers)} routers activos.")
 
         # 3. Iniciar Playwright
-        with sync_playwright() as p:
+        if target_routers:
+            p = sync_playwright().start()
+            navegadores = []
             for depto in target_routers:
                 apt_info = depto.get("apartmentId") or {}
                 apt_name = apt_info.get("name", "Desconocido")
@@ -96,6 +99,7 @@ def main():
                 })
 
                 navegador = p.chromium.launch(headless=False)
+                navegadores.append(navegador)
                 try:
                     contexto = navegador.new_context(ignore_https_errors=True)
                     pagina = contexto.new_page()
@@ -105,7 +109,7 @@ def main():
                     
                     print("   Iniciando sesión...")
                     pagina.locator("input[type='text']").nth(0).fill(depto["user"])
-                    pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+                    pagina.locator("input[type='password']").nth(0).fill(depto["passwordLocal"])
                     
                     try:
                         # Intentar clic en Acceder
@@ -134,7 +138,12 @@ def main():
                         "status": False
                     })
                 finally:
-                    navegador.close()
+                    pass
+
+            time.sleep(120)
+            for navegador in navegadores:
+                navegador.close()
+            p.stop()
     except Exception as e:
         print(f"Error general: {e}")
 
