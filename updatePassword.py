@@ -48,6 +48,12 @@ def main():
     print("Iniciando script de navegacion a seccion Inalambrico...")
     
     try:
+        if len(sys.argv) < 3 or not re.fullmatch(r"\d{6}", sys.argv[2]):
+            print("Error: debes indicar el departamento y una contraseña de exactamente 6 dígitos.")
+            return
+
+        nueva_password_solicitada = sys.argv[2]
+
         # 1. Obtener todos los routers
         todos_routers = obtener_apartamentos()
         if not todos_routers:
@@ -137,7 +143,7 @@ def main():
                     # Login
                     print("   Iniciando sesión...")
                     pagina.locator("input[type='text']").nth(0).fill(depto["user"])
-                    pagina.locator("input[type='password']").nth(0).fill(depto["password"])
+                    pagina.locator("input[type='password']").nth(0).fill(depto["passwordLocal"])
                     
                     try:
                         # Intentar clic en Acceder
@@ -246,15 +252,7 @@ def main():
                                     
                                     print(f"   Contraseña actual detectada: '{pass_actual}'")
                                     
-                                    num_str = str(num_depto)
-                                    base_pablo = f"319923pablo{num_str}"
-                                    swap_pablo = f"pablo{num_str}319923"
-                                    
-                                    nueva_pass = base_pablo
-                                    if base_pablo in pass_actual:
-                                        nueva_pass = swap_pablo
-                                    elif swap_pablo in pass_actual:
-                                        nueva_pass = base_pablo
+                                    nueva_pass = nueva_password_solicitada
                                     
                                     print(f"   Cambiando contraseña a: '{nueva_pass}'")
                                     inputs = psk_container.locator("input").all()
@@ -295,7 +293,8 @@ def main():
 
                             actualizar_apartamento(depto["_id"], {
                                 "steps": "Rotacion de canal y cambio de clave finalizados",
-                                "status": True
+                                "status": True,
+                                "passwordLocal": nueva_pass
                             })
                             pagina.wait_for_timeout(2000)
                         else:
