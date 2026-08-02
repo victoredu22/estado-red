@@ -23,11 +23,12 @@ def is_authorized(update: Update) -> bool:
     )
 
 
-async def send_output(update: Update, output: str) -> None:
+async def send_output(update: Update, output: str, success: bool) -> None:
     if not update.message:
         return
 
-    output = output.strip() or "El script terminó sin entregar salida."
+    prefix = "✅ Script finalizado correctamente.\n" if success else "❌ El script terminó con errores.\n"
+    output = prefix + (output.strip() or "El script terminó sin entregar salida.")
     for start in range(0, len(output), 3900):
         await update.message.reply_text(output[start : start + 3900])
 
@@ -67,7 +68,7 @@ async def verificar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await update.message.reply_text(f"Verificando departamento {context.args[0]}...")
     output = await run_script("verificarConexion.py", [context.args[0]])
-    await send_output(update, output)
+    await send_output(update, output, not output.startswith("El script terminó con código"))
 
 
 async def cambiar_password(
@@ -89,7 +90,7 @@ async def cambiar_password(
         f"Cambiando la contraseña del departamento {apartment_id}..."
     )
     output = await run_script("updatePassword.py", [apartment_id, new_password])
-    await send_output(update, output)
+    await send_output(update, output, not output.startswith("El script terminó con código"))
 
 
 def main() -> None:
