@@ -73,11 +73,15 @@ def is_authorized(update: Update) -> bool:
 
 
 import html
+import re
 
 
 def format_telegram_html(text: str) -> str:
     escaped = html.escape(text)
     escaped = escaped.replace("&lt;code&gt;", "<code>").replace("&lt;/code&gt;", "</code>")
+    escaped = re.sub(r"&lt;a href=&quot;(.*?)&quot;&gt;", r'<a href="\1">', escaped)
+    escaped = re.sub(r"&lt;a href=&#x27;(.*?)&#x27;&gt;", r'<a href="\1">', escaped)
+    escaped = escaped.replace("&lt;/a&gt;", "</a>")
     return escaped
 
 
