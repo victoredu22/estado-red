@@ -72,6 +72,15 @@ def is_authorized(update: Update) -> bool:
     )
 
 
+import html
+
+
+def format_telegram_html(text: str) -> str:
+    escaped = html.escape(text)
+    escaped = escaped.replace("&lt;code&gt;", "<code>").replace("&lt;/code&gt;", "</code>")
+    return escaped
+
+
 async def send_output(update: Update, output: str, success: bool) -> None:
     if not update.message:
         return
@@ -82,8 +91,14 @@ async def send_output(update: Update, output: str, success: bool) -> None:
 
     prefix = "✅ Proceso completado con éxito:\n\n" if is_success else "❌ Se detectaron errores durante el proceso:\n\n"
     final_text = prefix + clean_out
-    for start in range(0, len(final_text), 3900):
-        await update.message.reply_text(final_text[start : start + 3900])
+    html_formatted = format_telegram_html(final_text)
+
+    for start in range(0, len(html_formatted), 3900):
+        chunk = html_formatted[start : start + 3900]
+        try:
+            await update.message.reply_text(chunk, parse_mode="HTML")
+        except Exception:
+            await update.message.reply_text(chunk)
 
 
 async def run_script(script_name: str, arguments: list[str]) -> str:
