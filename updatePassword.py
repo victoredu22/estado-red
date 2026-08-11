@@ -257,13 +257,11 @@ def main():
                                 
                                 if input_pass and input_pass.is_visible():
                                     pass_actual = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
-                                    raw_url = depto.get("url", "")
-                                    url_actual = raw_url if raw_url.startswith("http") else f"http://{raw_url}"
-                                    print(f"   Contraseña actual detectada: <a href=\"{url_actual}\">{pass_actual}</a>")
+                                    print(f"   Contraseña actual detectada: <code>{pass_actual}</code>")
                                     
                                     nueva_pass = nueva_password_solicitada
                                     
-                                    print(f"   Cambiando contraseña a: <a href=\"{url_actual}\">{nueva_pass}</a>")
+                                    print(f"   Cambiando contraseña a: <code>{nueva_pass}</code>")
                                     inputs = psk_container.locator("input").all()
                                     for inp in inputs:
                                         try:
@@ -275,7 +273,7 @@ def main():
                                         except:
                                             pass
                                         
-                                    print(f"   Escritura robusta finalizada: <a href=\"{url_actual}\">{nueva_pass}</a>")
+                                    print(f"   Escritura robusta finalizada: <code>{nueva_pass}</code>")
                                 else:
                                     print("   No se encontro el campo de contraseña PSK.")
                             except Exception as e:
