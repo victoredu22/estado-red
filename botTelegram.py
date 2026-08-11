@@ -121,16 +121,31 @@ async def run_script(script_name: str, arguments: list[str]) -> str:
     return output
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_authorized(update):
         return
-    await update.message.reply_text(
-        "Comandos disponibles:\n"
-        "/verificar <departamento>\n"
-        "/cambiarpass <departamento> <clave de mínimo 8 caracteres>\n"
-        "/passwords (Lista todas las contraseñas)\n"
-        "/estado (Verifica si este PC está encendido)"
+    help_text = (
+        "🤖 <b>Menú de Comandos Disponibles:</b>\n\n"
+        "1️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
+        "   └ Verifica la conexión y estado del router del departamento indicado.\n"
+        "   <i>Ejemplo:</i> <code>/verificar 6</code>\n\n"
+        "2️⃣ <b>/passwords [departamento]</b>\n"
+        "   └ Obtiene la contraseña y URL del router de un departamento (o de todos si se omite).\n"
+        "   <i>Ejemplo:</i> <code>/passwords 6</code> o <code>/passwords</code>\n\n"
+        "3️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
+        "   └ Cambia la contraseña Wi-Fi del departamento (mínimo 8 caracteres).\n"
+        "   <i>Ejemplo:</i> <code>/cambiarpass 6 clave1234</code>\n\n"
+        "4️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
+        "   └ Verifica si el PC/Servidor está encendido, mostrando tiempo activo (Uptime).\n\n"
+        "5️⃣ <b>/help</b> (o /ayuda, /start)\n"
+        "   └ Muestra esta lista de comandos de ayuda.\n\n"
+        "💡 <i>Tip: Al tocar o hacer clic sobre cualquier contraseña en los resultados, se copiará automáticamente al portapapeles.</i>"
     )
+    await update.message.reply_text(help_text, parse_mode="HTML")
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await help_command(update, context)
 
 
 async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -183,6 +198,21 @@ async def passwords(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_output(update, output, not output.startswith("El script terminó con código"))
 
 
+async def post_init(application: Application) -> None:
+    from telegram import BotCommand
+    commands = [
+        BotCommand("help", "Ver comandos de ayuda"),
+        BotCommand("estado", "Verificar si el PC está encendido"),
+        BotCommand("passwords", "Obtener contraseñas de departamentos"),
+        BotCommand("verificar", "Verificar estado de red de un depto"),
+        BotCommand("cambiarpass", "Cambiar contraseña de un depto"),
+    ]
+    try:
+        await application.bot.set_my_commands(commands)
+    except Exception as e:
+        print(f"Aviso al configurar menú de comandos: {e}")
+
+
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] in ("--status", "status", "--pc", "pc", "--estado", "estado"):
         print(get_pc_status_message())
@@ -194,8 +224,10 @@ def main() -> None:
         raise RuntimeError("Falta TELEGRAM_CHAT_ID en .env")
 
     print("🤖 Bot de Telegram iniciado y escuchando eventos...")
-    application = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("ayuda", help_command))
     application.add_handler(CommandHandler("verificar", verificar))
     application.add_handler(CommandHandler("cambiarpass", cambiar_password))
     application.add_handler(CommandHandler("passwords", passwords))
