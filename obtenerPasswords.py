@@ -65,7 +65,8 @@ def main():
             print(f"📌 {apt_name} (ID: {apt_id})")
             print(f"   • URL Router: {url_router}")
             print(f"   • Usuario: {user_router}")
-            print(f"   • Password Mongo: <a href=\"{url_router}\"><code>{pass_a_usar}</code></a>")
+            link_url = url_router if url_router.startswith("http") else f"http://{url_router}"
+            print(f"   • Password Mongo: <a href=\"{link_url}\">{pass_a_usar}</a>")
             print("--------------------------------------------------")
 
             navegador = p.chromium.launch(headless=False, args=["--start-maximized"])
@@ -139,9 +140,9 @@ def main():
                         print(f"   Aviso al leer campo PSK: {e_pass}")
 
                 if wifi_pass_detectada:
-                    print(f"   ✅ CONTRASEÑA WI-FI LEÍDA DE LA PÁGINA: <a href=\"{url_router}\"><code>{wifi_pass_detectada}</code></a>")
+                    print(f"   ✅ CONTRASEÑA WI-FI LEÍDA DE LA PÁGINA: <a href=\"{link_url}\">{wifi_pass_detectada}</a>")
                 else:
-                    print(f"   ⚠️ No se pudo leer el campo PSK directamente de la página. (Mongo: <a href=\"{url_router}\"><code>{pass_a_usar}</code></a>)")
+                    print(f"   ⚠️ No se pudo leer el campo PSK directamente de la página. (Mongo: <a href=\"{link_url}\">{pass_a_usar}</a>)")
 
                 print("   [INFO] Manteniendo ventana abierta durante 20 segundos...")
                 pagina.wait_for_timeout(20000)
