@@ -52,8 +52,8 @@ def main():
     print("Iniciando script de navegacion a seccion Inalambrico...")
     
     try:
-        if len(sys.argv) < 3 or not re.fullmatch(r"\d{6}", sys.argv[2]):
-            print("Error: debes indicar el departamento y una contraseña de exactamente 6 dígitos.")
+        if len(sys.argv) < 3 or len(sys.argv[2]) < 8:
+            print("Error: debes indicar el departamento y una contraseña de mínimo 8 caracteres.")
             return
 
         nueva_password_solicitada = sys.argv[2]
@@ -145,18 +145,28 @@ def main():
                         continue
 
                     # Login
-                    print("   Iniciando sesión...")
+                    pass_a_usar = depto.get("password") or ""
+                    print(f"   Iniciando sesión con usuario '{depto['user']}' y contraseña (password): '{pass_a_usar}'...")
                     pagina.locator("input[type='text']").nth(0).fill(depto["user"])
-                    pagina.locator("input[type='password']").nth(0).fill(depto["passwordLocal"])
+                    pass_input = pagina.locator("input[type='password']").first
+                    pass_input.fill(pass_a_usar)
                     
-                    try:
-                        # Intentar clic en Acceder
-                        pagina.locator("text=Acceder").nth(1).click()
-                        pagina.wait_for_timeout(3000)
-                    except Exception as e:
-                        print(f"   Error al hacer clic en Acceder: {e}")
-                        actualizar_apartamento(depto["_id"], {"steps": "Error en botón login", "status": False})
-                        continue
+                    btn = pagina.locator("a.button-button, button, input[type='submit'], input[type='button']").filter(has_text=re.compile(r"Acceder|Login|Iniciar", re.I)).first
+                    if btn.is_visible():
+                        try:
+                            btn.evaluate("node => node.click()")
+                        except Exception:
+                            try:
+                                btn.click(force=True)
+                            except Exception:
+                                pass
+                    else:
+                        try:
+                            pass_input.press("Enter")
+                        except Exception:
+                            pass
+
+                    pagina.wait_for_timeout(4000)
 
                     # Verificar si el login fue exitoso
                     if pagina.url.endswith("/login") or "login" in pagina.title().lower():
@@ -251,14 +261,11 @@ def main():
                                 
                                 if input_pass and input_pass.is_visible():
                                     pass_actual = (input_pass.input_value() or input_pass.get_attribute("value") or "").strip()
-                                    if not pass_actual:
-                                        pass_actual = psk_container.inner_text().strip().split('\n')[0]
-                                    
-                                    print(f"   Contraseña actual detectada: '{pass_actual}'")
+                                    print(f"   Contraseña actual detectada: <code>{pass_actual}</code>")
                                     
                                     nueva_pass = nueva_password_solicitada
                                     
-                                    print(f"   Cambiando contraseña a: '{nueva_pass}'")
+                                    print(f"   Cambiando contraseña a: <code>{nueva_pass}</code>")
                                     inputs = psk_container.locator("input").all()
                                     for inp in inputs:
                                         try:
@@ -270,7 +277,7 @@ def main():
                                         except:
                                             pass
                                         
-                                    print(f"   Escritura robusta finalizada: '{nueva_pass}'")
+                                    print(f"   Escritura robusta finalizada: <code>{nueva_pass}</code>")
                                 else:
                                     print("   No se encontro el campo de contraseña PSK.")
                             except Exception as e:
@@ -310,7 +317,12 @@ def main():
                         actualizar_apartamento(depto["_id"], {"steps": "Error navegando a Inalambrico", "status": False})
 
                 finally:
-                    navegador.close()
+                    print("   [INFO] Manteniendo ventana del navegador abierta durante 20 segundos...")
+                    time.sleep(20)
+                    try:
+                        navegador.close()
+                    except Exception:
+                        pass
 
     except Exception as e:
         print(f"Error general en el proceso: {e}")

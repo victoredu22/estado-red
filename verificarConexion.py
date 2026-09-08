@@ -3,6 +3,7 @@ import requests
 import os
 import sys
 import time
+import re
 from dotenv import load_dotenv
 
 # Forzar salida en UTF-8 para evitar errores en terminales Windows
@@ -82,74 +83,117 @@ def main():
             apt_info = target_routers[0].get("apartmentId") or {}
             print(f"Objetivo único: {apt_info.get('name')} (ID: {apt_info.get('id')})")
         else:
-            # Si no se pasan argumentos, procesamos todos los activos
             target_routers = [d for d in todos_routers if d.get("active")]
             print(f"No se especificó un departamento. Se procesarán {len(target_routers)} routers activos.")
 
         # 3. Iniciar Playwright
         if target_routers:
-            p = sync_playwright().start()
-            navegadores = []
-            for depto in target_routers:
-                apt_info = depto.get("apartmentId") or {}
-                apt_name = apt_info.get("name", "Desconocido")
-                apt_id = apt_info.get("id", "N/A")
-                
-                print(f"\nProcesando: {apt_name} (ID: {apt_id})")
-                
-                actualizar_apartamento(depto["_id"], {
-                    "steps": f"Verificando conexión...",
-                    "status": False
-                })
-
-                navegador = p.chromium.launch(headless=False)
-                navegadores.append(navegador)
-                try:
-                    contexto = navegador.new_context(ignore_https_errors=True)
-                    pagina = contexto.new_page()
-
-                    print(f"   Intentando conectar a {depto['url']} ...")
-                    pagina.goto(depto["url"], timeout=30000)
+            with sync_playwright() as p:
+                for depto in target_routers:
+                    apt_info = depto.get("apartmentId") or {}
+                    apt_name = apt_info.get("name", "Desconocido")
+                    apt_id = apt_info.get("id", "N/A")
                     
-                    print("   Iniciando sesión...")
-                    pagina.locator("input[type='text']").nth(0).fill(depto["user"])
-                    pagina.locator("input[type='password']").nth(0).fill(depto["passwordLocal"])
+                    print(f"\nProcesando: {apt_name} (ID: {apt_id})")
                     
-                    try:
-                        # Intentar clic en Acceder
-                        pagina.locator("text=Acceder").nth(1).click()
-                        pagina.wait_for_timeout(3000)
-                    except Exception as e:
-                        raise Exception("Fallo en el botón de inicio de sesión o timeout")
-
-                    # Verificar si el login fue exitoso comprobando si sigue en la pantalla de login
-                    if pagina.url.endswith("/login") or "login" in pagina.title().lower():
-                        print("   [ERROR] Credenciales incorrectas.")
-                        actualizar_apartamento(depto["_id"], {
-                            "steps": "Fallo: Credenciales incorrectas",
-                            "status": False
-                        })
-                    else:
-                        print(f"   [ÉXITO] Conexión y login exitosos.")
-                        actualizar_apartamento(depto["_id"], {
-                            "steps": "Conexión y login exitosos",
-                            "status": True
-                        })
-                        navegadores.remove(navegador)
-                        navegador.close()
-                except Exception as e:
-                    print(f"   [ERROR] No se pudo conectar a la URL: {e}")
                     actualizar_apartamento(depto["_id"], {
-                        "steps": f"Fallo de conexión: {str(e)[:60]}",
+                        "steps": "Verificando conexión...",
                         "status": False
                     })
-                finally:
-                    pass
 
-            time.sleep(120)
-            for navegador in navegadores:
-                navegador.close()
-            p.stop()
+                    navegador = p.chromium.launch(headless=False, args=["--start-maximized"])
+                    try:
+                        contexto = navegador.new_context(ignore_https_errors=True, no_viewport=True)
+                        pagina = contexto.new_page()
+
+                        print(f"   Intentando conectar a {depto['url']} ...")
+                        pagina.goto(depto["url"], timeout=30000)
+                        pagina.wait_for_timeout(2000)
+                        
+                        # Usar el parámetro 'password' de Mongo
+                        pass_a_usar = depto.get("password") or ""
+                        print(f"   Iniciando sesión con usuario '{depto['user']}' y contraseña (password): '{pass_a_usar}'...")
+                        
+                        # Llenar usuario y contraseña
+                        pagina.locator("input[type='text']").nth(0).fill(depto["user"])
+                        pass_input = pagina.locator("input[type='password']").first
+                        pass_input.fill(pass_a_usar)
+                        pagina.wait_for_timeout(500)
+                        
+                        # Estrategia de clic robusta para el botón Acceder
+                        btn = pagina.locator("a.button-button, button, input[type='submit'], input[type='button']").filter(has_text=re.compile(r"Acceder|Login|Iniciar", re.I)).first
+                        
+                        if btn.is_visible():
+                            print("   Ejecutando clic directo (JS evaluate) en el botón Acceder...")
+                            try:
+                                btn.evaluate("node => node.click()")
+                            except Exception:
+                                try:
+                                    btn.click(force=True)
+                                except Exception:
+                                    pass
+                        else:
+                            print("   Enviando tecla Enter en el campo de contraseña...")
+                            try:
+                                pass_input.press("Enter")
+                            except Exception:
+                                pass
+
+                        pagina.wait_for_timeout(5000)
+
+                        # Detectar éxito comprobando si hay elementos del panel de control
+                        es_exitoso = False
+                        try:
+                            if (pagina.locator("text=INALAMBRICO").count() > 0 or 
+                                pagina.locator("text=INALÁMBRICO").count() > 0 or 
+                                pagina.locator("text=WIRELESS").count() > 0 or 
+                                pagina.locator("text=ESTADO").count() > 0 or
+                                "cpe" in pagina.title().lower()):
+                                es_exitoso = True
+                        except Exception:
+                            es_exitoso = False
+
+                        if es_exitoso:
+                            # Extraer tiempo de conexión / activación de la página
+                            tiempos_encontrados = []
+                            try:
+                                body_text = pagina.locator("body").inner_text()
+                                lineas = [l.strip() for l in body_text.split("\n") if l.strip()]
+                                for i in range(len(lineas) - 1):
+                                    if re.search(r"tiempo\s*de|uptime|tiempo\s*transcurrido", lineas[i], re.I):
+                                        label = lineas[i].rstrip(":")
+                                        val = lineas[i+1]
+                                        tiempos_encontrados.append(f"{label}: {val}")
+                            except Exception as err_t:
+                                print(f"   Aviso al extraer tiempo: {err_t}")
+
+                            info_tiempo = " | ".join(dict.fromkeys(tiempos_encontrados)) if tiempos_encontrados else "Tiempo no especificado"
+                            print(f"   [ÉXITO] Conexión y login exitosos.")
+                            print(f"   ⏱️ {info_tiempo}")
+                            actualizar_apartamento(depto["_id"], {
+                                "steps": f"Conexión exitosa ({info_tiempo})",
+                                "status": True
+                            })
+                        else:
+                            print(f"   [ERROR] Credenciales incorrectas o el inicio de sesión falló.")
+                            actualizar_apartamento(depto["_id"], {
+                                "steps": "Fallo: Credenciales incorrectas",
+                                "status": False
+                            })
+                    except Exception as e:
+                        print(f"   [ERROR] No se pudo conectar a la URL o timeout: {e}")
+                        actualizar_apartamento(depto["_id"], {
+                            "steps": f"Fallo de conexión: {str(e)[:60]}",
+                            "status": False
+                        })
+                    finally:
+                        print("   [INFO] Manteniendo ventana del navegador abierta durante 20 segundos...")
+                        time.sleep(20)
+                        try:
+                            navegador.close()
+                        except Exception:
+                            pass
+
     except Exception as e:
         print(f"Error general: {e}")
 
