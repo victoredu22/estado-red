@@ -9,11 +9,15 @@ import socketio
 
 load_dotenv()  # Carga las variables del archivo .env
 api_url = os.getenv('API_APARTMENTS_URL') 
+api_key = os.getenv('ESTADO_RED_API_KEY')
+if not api_key:
+    raise RuntimeError("ESTADO_RED_API_KEY no está configurada")
+api_headers = {'X-API-Key': api_key}
 
 def obtener_apartamentos():
     try:
         url = f"{api_url}/room-routers"
-        response = requests.get(url)
+        response = requests.get(url, headers=api_headers)
         print("API URL:", url)
         print("Código de estado:", response.status_code)
         response.raise_for_status()
@@ -28,7 +32,7 @@ def actualizar_apartamento(apartamento_id, data):
     try:
         url = f"{api_url}/room-routers/{apartamento_id}"
         print(f"Enviando PATCH a {url} con data: {data}")
-        response = requests.patch(url, json=data)
+        response = requests.patch(url, json=data, headers=api_headers)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

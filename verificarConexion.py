@@ -14,6 +14,10 @@ if hasattr(sys.stdout, 'reconfigure'):
 # =====================
 load_dotenv()
 api_url = os.getenv("API_APARTMENTS_URL")
+api_key = os.getenv("ESTADO_RED_API_KEY")
+if not api_key:
+    raise RuntimeError("ESTADO_RED_API_KEY no está configurada")
+api_headers = {"X-API-Key": api_key}
 
 # =====================
 # FUNCIONES API
@@ -22,7 +26,7 @@ def obtener_apartamentos():
     """Obtiene la lista de todos los routers de la API"""
     try:
         url = f"{api_url}/room-routers"
-        response = requests.get(url)
+        response = requests.get(url, headers=api_headers)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
@@ -34,7 +38,7 @@ def actualizar_apartamento(api_mongo_id, data):
     try:
         url = f"{api_url}/room-routers/{api_mongo_id}"
         print(f"   Actualizando API ({api_mongo_id}): {data}")
-        response = requests.patch(url, json=data)
+        response = requests.patch(url, json=data, headers=api_headers)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
