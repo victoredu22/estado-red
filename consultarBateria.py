@@ -5,6 +5,13 @@ import time
 import requests
 from dotenv import load_dotenv
 
+# Forzar salida en UTF-8 para evitar errores de codificación en Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 load_dotenv()
 
 API_URL = os.getenv("API_APARTMENTS_URL", "").rstrip("/")
@@ -58,13 +65,13 @@ def main() -> None:
     try:
         validar_configuracion()
         status = consultar_bateria()
-        print("Estado de batería:")
-        print(f"  Batería: {status.get('battery')}%")
-        print(f"  Cargando: {'sí' if status.get('charging') else 'no'}")
-        print(f"  Dispositivo: {status.get('deviceId', 'sin identificar')}")
-        print(f"  Actualizado: {status.get('updatedAt', 'sin fecha')}")
+        print("🔋 Estado de batería:")
+        print(f"• Batería: {status.get('battery')}%")
+        print(f"• Cargando: {'Sí ⚡' if status.get('charging') else 'No'}")
+        print(f"• Dispositivo: {status.get('deviceId', 'sin identificar')}")
+        print(f"• Actualizado: {status.get('updatedAt', 'sin fecha')}")
     except (requests.RequestException, RuntimeError, TimeoutError) as error:
-        print(f"Error consultando batería: {error}")
+        print(f"[ERROR] Error consultando batería: {error}")
         sys.exit(1)
 
 

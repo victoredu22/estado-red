@@ -132,18 +132,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "2️⃣ <b>/ocupados [departamento]</b> (o /llegadas, /reservas)\n"
         "   └ Consulta los departamentos ocupados actualmente según los calendarios iCal.\n"
         "   <i>Ejemplo:</i> <code>/ocupados</code> o <code>/ocupados 1</code>\n\n"
-        "3️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
+        "3️⃣ <b>/bateria</b> (o /solicitarbateria, /obtenerbateria)\n"
+        "   └ Consulta el estado de batería del dispositivo móvil en tiempo real.\n"
+        "   <i>Ejemplo:</i> <code>/bateria</code>\n\n"
+        "4️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
         "   └ Verifica la conexión y estado del router del departamento indicado.\n"
         "   <i>Ejemplo:</i> <code>/verificar 6</code>\n\n"
-        "4️⃣ <b>/passwords [departamento]</b>\n"
+        "5️⃣ <b>/passwords [departamento]</b>\n"
         "   └ Obtiene la contraseña y URL del router de un departamento (o de todos si se omite).\n"
         "   <i>Ejemplo:</i> <code>/passwords 6</code> o <code>/passwords</code>\n\n"
-        "5️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
+        "6️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
         "   └ Cambia la contraseña Wi-Fi del departamento (mínimo 8 caracteres).\n"
         "   <i>Ejemplo:</i> <code>/cambiarpass 6 clave1234</code>\n\n"
-        "6️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
+        "7️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
         "   └ Verifica si el PC/Servidor está encendido, mostrando tiempo activo (Uptime).\n\n"
-        "7️⃣ <b>/help</b> (o /ayuda, /start)\n"
+        "8️⃣ <b>/help</b> (o /ayuda, /start)\n"
         "   └ Muestra este menú de comandos de ayuda.\n\n"
         "💡 <i>Tip: Al tocar o hacer clic sobre cualquier contraseña en los resultados, se copiará automáticamente al portapapeles.</i>"
     )
@@ -246,6 +249,36 @@ async def proximas_llegadas(
     await send_output(update, output, not output.startswith("El script terminó con código"))
 
 
+async def consultar_bateria_cmd(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    await update.message.reply_text("Consultando estado de batería...")
+    output = await run_script("consultarBateria.py", [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
+async def solicitar_bateria_cmd(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    await update.message.reply_text("Solicitando estado de batería al dispositivo...")
+    output = await run_script("solicitarBateria.py", [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
+async def obtener_bateria_cmd(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    await update.message.reply_text("Obteniendo último estado registrado de batería...")
+    output = await run_script("obtenerBateria.py", [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
 async def post_init(application: Application) -> None:
     from telegram import (
         BotCommand,
@@ -256,6 +289,7 @@ async def post_init(application: Application) -> None:
     commands = [
         BotCommand("libres", "Ver departamentos libres actualmente"),
         BotCommand("ocupados", "Ver departamentos ocupados actualmente"),
+        BotCommand("bateria", "Consultar batería del dispositivo"),
         BotCommand("verificar", "Verificar conexión de un depto"),
         BotCommand("passwords", "Obtener contraseñas de WiFi"),
         BotCommand("cambiarpass", "Cambiar contraseña de un depto"),
@@ -305,6 +339,10 @@ def main() -> None:
     application.add_handler(CommandHandler("llegas", departamentos_ocupados))
     application.add_handler(CommandHandler("reservas", departamentos_ocupados))
     application.add_handler(CommandHandler("proximasllegadas", proximas_llegadas))
+    application.add_handler(CommandHandler("bateria", consultar_bateria_cmd))
+    application.add_handler(CommandHandler("consultarbateria", consultar_bateria_cmd))
+    application.add_handler(CommandHandler("solicitarbateria", solicitar_bateria_cmd))
+    application.add_handler(CommandHandler("obtenerbateria", obtener_bateria_cmd))
     application.add_handler(CommandHandler("estado", estado))
     application.add_handler(CommandHandler("pc", estado))
     application.add_handler(CommandHandler("ping", estado))
