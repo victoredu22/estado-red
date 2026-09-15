@@ -126,19 +126,25 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     help_text = (
         "🤖 <b>Menú de Comandos Disponibles:</b>\n\n"
-        "1️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
+        "1️⃣ <b>/libres</b> (o /disponibles)\n"
+        "   └ Consulta los departamentos que están libres actualmente.\n"
+        "   <i>Ejemplo:</i> <code>/libres</code>\n\n"
+        "2️⃣ <b>/ocupados [departamento]</b> (o /llegadas, /reservas)\n"
+        "   └ Consulta los departamentos ocupados actualmente según los calendarios iCal.\n"
+        "   <i>Ejemplo:</i> <code>/ocupados</code> o <code>/ocupados 1</code>\n\n"
+        "3️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
         "   └ Verifica la conexión y estado del router del departamento indicado.\n"
         "   <i>Ejemplo:</i> <code>/verificar 6</code>\n\n"
-        "2️⃣ <b>/passwords [departamento]</b>\n"
+        "4️⃣ <b>/passwords [departamento]</b>\n"
         "   └ Obtiene la contraseña y URL del router de un departamento (o de todos si se omite).\n"
         "   <i>Ejemplo:</i> <code>/passwords 6</code> o <code>/passwords</code>\n\n"
-        "3️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
+        "5️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
         "   └ Cambia la contraseña Wi-Fi del departamento (mínimo 8 caracteres).\n"
         "   <i>Ejemplo:</i> <code>/cambiarpass 6 clave1234</code>\n\n"
-        "4️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
+        "6️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
         "   └ Verifica si el PC/Servidor está encendido, mostrando tiempo activo (Uptime).\n\n"
-        "5️⃣ <b>/help</b> (o /ayuda, /start)\n"
-        "   └ Muestra esta lista de comandos de ayuda.\n\n"
+        "7️⃣ <b>/help</b> (o /ayuda, /start)\n"
+        "   └ Muestra este menú de comandos de ayuda.\n\n"
         "💡 <i>Tip: Al tocar o hacer clic sobre cualquier contraseña en los resultados, se copiará automáticamente al portapapeles.</i>"
     )
     await update.message.reply_text(help_text, parse_mode="HTML")
@@ -198,17 +204,78 @@ async def passwords(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_output(update, output, not output.startswith("El script terminó con código"))
 
 
+async def departamentos_libres(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    await update.message.reply_text("Consultando departamentos libres...")
+    output = await run_script("departamentosLibres.py", [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
+async def departamentos_ocupados(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    dept_arg = context.args[0] if context.args else ""
+    if dept_arg and not dept_arg.isdigit():
+        await update.message.reply_text("Uso: /ocupados [departamento]\nEjemplo: /ocupados 1 o /ocupados")
+        return
+
+    msg = f"Consultando estado de ocupación para el departamento {dept_arg}..." if dept_arg else "Consultando departamentos ocupados..."
+    await update.message.reply_text(msg)
+    output = await run_script("departamentosOcupados.py", [dept_arg] if dept_arg else [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
+async def proximas_llegadas(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    dept_arg = context.args[0] if context.args else ""
+    if dept_arg and not dept_arg.isdigit():
+        await update.message.reply_text("Uso: /llegadas [departamento]\nEjemplo: /llegadas 1 o /llegadas")
+        return
+
+    msg = f"Consultando próximas llegadas para el departamento {dept_arg}..." if dept_arg else "Consultando próximas llegadas..."
+    await update.message.reply_text(msg)
+    output = await run_script("proximasLlegadas.py", [dept_arg] if dept_arg else [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
 async def post_init(application: Application) -> None:
-    from telegram import BotCommand
+    from telegram import (
+        BotCommand,
+        BotCommandScopeAllPrivateChats,
+        BotCommandScopeChat,
+        BotCommandScopeDefault,
+    )
     commands = [
-        BotCommand("help", "Ver comandos de ayuda"),
-        BotCommand("estado", "Verificar si el PC está encendido"),
-        BotCommand("passwords", "Obtener contraseñas de departamentos"),
-        BotCommand("verificar", "Verificar estado de red de un depto"),
+        BotCommand("libres", "Ver departamentos libres actualmente"),
+        BotCommand("ocupados", "Ver departamentos ocupados actualmente"),
+        BotCommand("verificar", "Verificar conexión de un depto"),
+        BotCommand("passwords", "Obtener contraseñas de WiFi"),
         BotCommand("cambiarpass", "Cambiar contraseña de un depto"),
+        BotCommand("estado", "Verificar si el PC está encendido"),
+        BotCommand("help", "Ver menú de comandos de ayuda"),
     ]
+    scopes = [
+        (BotCommandScopeDefault(), None),
+        (BotCommandScopeDefault(), "es"),
+        (BotCommandScopeAllPrivateChats(), None),
+        (BotCommandScopeAllPrivateChats(), "es"),
+    ]
+    if AUTHORIZED_CHAT_ID and AUTHORIZED_CHAT_ID.lstrip("-").isdigit():
+        c_scope = BotCommandScopeChat(chat_id=int(AUTHORIZED_CHAT_ID))
+        scopes.append((c_scope, None))
+        scopes.append((c_scope, "es"))
+
     try:
-        await application.bot.set_my_commands(commands)
+        for sc, lang in scopes:
+            await application.bot.set_my_commands(commands, scope=sc, language_code=lang)
     except Exception as e:
         print(f"Aviso al configurar menú de comandos: {e}")
 
@@ -231,6 +298,13 @@ def main() -> None:
     application.add_handler(CommandHandler("verificar", verificar))
     application.add_handler(CommandHandler("cambiarpass", cambiar_password))
     application.add_handler(CommandHandler("passwords", passwords))
+    application.add_handler(CommandHandler("libres", departamentos_libres))
+    application.add_handler(CommandHandler("disponibles", departamentos_libres))
+    application.add_handler(CommandHandler("ocupados", departamentos_ocupados))
+    application.add_handler(CommandHandler("llegadas", departamentos_ocupados))
+    application.add_handler(CommandHandler("llegas", departamentos_ocupados))
+    application.add_handler(CommandHandler("reservas", departamentos_ocupados))
+    application.add_handler(CommandHandler("proximasllegadas", proximas_llegadas))
     application.add_handler(CommandHandler("estado", estado))
     application.add_handler(CommandHandler("pc", estado))
     application.add_handler(CommandHandler("ping", estado))

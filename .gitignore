@@ -12,6 +12,8 @@
 node_modules/
 dist/
 build/
+__pycache__/
+*.pyc
 
 # Ignorar archivos de sistema
 .DS_Store   # macOS

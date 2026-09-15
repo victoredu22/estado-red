@@ -12,12 +12,16 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 load_dotenv()
 api_url = os.getenv("API_APARTMENTS_URL", "https://huellasaraucania.cl/api")
+api_key = os.getenv("ESTADO_RED_API_KEY")
+if not api_key:
+    raise RuntimeError("ESTADO_RED_API_KEY no está configurada")
+api_headers = {"X-API-Key": api_key}
 
 def obtener_apartamentos():
     """Obtiene la lista de todos los routers desde la API"""
     try:
         url = f"{api_url}/room-routers"
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=api_headers, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

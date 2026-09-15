@@ -70,7 +70,7 @@ def fetch_apartment_ical(apt: dict) -> tuple[dict, list[dict] | None, str | None
         return apt, None, f"Error al consultar iCal: {e}"
 
 
-def obtener_proximas_llegadas(apartment_id: str | None = None) -> list:
+def obtener_departamentos_ocupados(apartment_id: str | None = None) -> list:
     if not API_URL:
         raise RuntimeError("API_APARTMENTS_URL no está configurada")
     if not API_KEY:
@@ -107,40 +107,24 @@ def obtener_proximas_llegadas(apartment_id: str | None = None) -> list:
 
     results = []
     for apt, events, error in ical_results:
-        item = {
-            "apartmentId": apt["id"],
-            "apartmentName": apt["name"],
-            "nextArrival": None,
-            "currentReservation": None,
-            "error": error,
-        }
+        if error or not events:
+            continue
 
-        if events:
-            # Solo llegadas posteriores o iguales a hoy (no las que empezaron antes de hoy / en curso)
-            future_events = [e for e in events if e["start"] >= hoy]
-            current_events = [e for e in events if e["start"] < hoy and e["end"] > hoy]
+        # Reserva en curso / ocupado: empezó hoy o antes, y termina después de hoy
+        current_events = [e for e in events if e["start"] <= hoy < e["end"]]
+        if current_events:
+            curr = current_events[0]
+            check_in_str = format_date_es(curr["start"])
+            if curr["start"] == hoy:
+                check_in_str = f"hoy - {check_in_str}"
 
-            if future_events:
-                next_ev = future_events[0]
-                check_in_str = format_date_es(next_ev["start"])
-                if next_ev["start"] == hoy:
-                    check_in_str = f"hoy - {check_in_str}"
-
-                item["nextArrival"] = {
-                    "checkIn": check_in_str,
-                    "checkOut": format_date_es(next_ev["end"]),
-                    "summary": next_ev.get("summary", "Sin detalle"),
-                }
-
-            if current_events:
-                curr_ev = current_events[0]
-                item["currentReservation"] = {
-                    "checkIn": format_date_es(curr_ev["start"]),
-                    "checkOut": format_date_es(curr_ev["end"]),
-                    "summary": curr_ev.get("summary", "Sin detalle"),
-                }
-
-        results.append(item)
+            results.append({
+                "apartmentId": apt["id"],
+                "apartmentName": apt["name"],
+                "checkIn": check_in_str,
+                "checkOut": format_date_es(curr["end"]),
+                "summary": curr.get("summary", "Sin detalle"),
+            })
 
     return results
 
@@ -149,38 +133,28 @@ def main() -> None:
     apartment_id = sys.argv[1] if len(sys.argv) > 1 else None
 
     try:
-        arrivals = obtener_proximas_llegadas(apartment_id)
+        ocupados = obtener_departamentos_ocupados(apartment_id)
     except requests.RequestException as error:
-        print(f"Error consultando próximas llegadas: {error}")
+        print(f"Error consultando departamentos ocupados: {error}")
         raise SystemExit(1)
     except RuntimeError as error:
         print(error)
         raise SystemExit(1)
 
-    if not arrivals:
-        print("No se encontraron departamentos con iCal configurado.")
+    if not ocupados:
+        print("No hay departamentos ocupados actualmente según los iCal consultados.")
         return
 
-    for apartment in arrivals:
-        reservation = apartment.get("nextArrival")
-        current_res = apartment.get("currentReservation")
-        title = f"Departamento {apartment.get('apartmentId')}: {apartment.get('apartmentName')}"
-
-        if apartment.get("error"):
-            print(f"{title} - {apartment['error']}")
-        elif reservation:
-            print(
-                f"{title}\n"
-                f"  Check-in: {reservation['checkIn']}\n"
-                f"  Check-out: {reservation['checkOut']}\n"
-                f"  Estado: {reservation.get('summary', 'Sin detalle')}"
-            )
-        elif current_res:
-            print(
-                f"{title} - Sin próximas llegadas (actualmente ocupado hasta {current_res['checkOut']})."
-            )
-        else:
-            print(f"{title} - Sin próximas llegadas registradas en el iCal.")
+    print("Departamentos ocupados:\n")
+    bloques = []
+    for apt in ocupados:
+        bloques.append(
+            f"Departamento {apt['apartmentId']}: {apt['apartmentName']}\n"
+            f"  Check-in: {apt['checkIn']}\n"
+            f"  Check-out: {apt['checkOut']}\n"
+            f"  Estado: {apt['summary']}"
+        )
+    print("\n---\n".join(bloques))
 
 
 if __name__ == "__main__":
