@@ -4,6 +4,13 @@ import sys
 import requests
 from dotenv import load_dotenv
 
+# Forzar salida en UTF-8 para evitar errores de codificación en Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 load_dotenv()
 
 API_URL = os.getenv("API_APARTMENTS_URL", "").rstrip("/")
@@ -29,10 +36,12 @@ def activar_llamada() -> dict:
 def main() -> None:
     try:
         result = activar_llamada()
-        print("Señal de llamada enviada correctamente.")
-        print(result)
+        print("📞 Señal de llamada enviada con éxito:")
+        if result.get("messageId"):
+            print(f"• Message ID: {result.get('messageId')}")
+        print("El dispositivo móvil debería comenzar a sonar.")
     except (requests.RequestException, RuntimeError) as error:
-        print(f"Error activando llamada: {error}")
+        print(f"[ERROR] Error activando llamada: {error}")
         sys.exit(1)
 
 

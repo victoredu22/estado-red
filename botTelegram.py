@@ -135,18 +135,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "3️⃣ <b>/bateria</b> (o /solicitarbateria, /obtenerbateria)\n"
         "   └ Consulta el estado de batería del dispositivo móvil en tiempo real.\n"
         "   <i>Ejemplo:</i> <code>/bateria</code>\n\n"
-        "4️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
+        "4️⃣ <b>/llamada</b> (o /llamar, /activarllamada)\n"
+        "   └ Envía una señal push FCM para activar la llamada en el dispositivo móvil.\n"
+        "   <i>Ejemplo:</i> <code>/llamada</code>\n\n"
+        "5️⃣ <b>/verificar &lt;departamento&gt;</b>\n"
         "   └ Verifica la conexión y estado del router del departamento indicado.\n"
         "   <i>Ejemplo:</i> <code>/verificar 6</code>\n\n"
-        "5️⃣ <b>/passwords [departamento]</b>\n"
+        "6️⃣ <b>/passwords [departamento]</b>\n"
         "   └ Obtiene la contraseña y URL del router de un departamento (o de todos si se omite).\n"
         "   <i>Ejemplo:</i> <code>/passwords 6</code> o <code>/passwords</code>\n\n"
-        "6️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
+        "7️⃣ <b>/cambiarpass &lt;departamento&gt; &lt;nueva_clave&gt;</b>\n"
         "   └ Cambia la contraseña Wi-Fi del departamento (mínimo 8 caracteres).\n"
         "   <i>Ejemplo:</i> <code>/cambiarpass 6 clave1234</code>\n\n"
-        "7️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
+        "8️⃣ <b>/estado</b> (o /pc, /ping, /encendido)\n"
         "   └ Verifica si el PC/Servidor está encendido, mostrando tiempo activo (Uptime).\n\n"
-        "8️⃣ <b>/help</b> (o /ayuda, /start)\n"
+        "9️⃣ <b>/help</b> (o /ayuda, /start)\n"
         "   └ Muestra este menú de comandos de ayuda.\n\n"
         "💡 <i>Tip: Al tocar o hacer clic sobre cualquier contraseña en los resultados, se copiará automáticamente al portapapeles.</i>"
     )
@@ -279,6 +282,16 @@ async def obtener_bateria_cmd(
     await send_output(update, output, not output.startswith("El script terminó con código"))
 
 
+async def activar_llamada_cmd(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not is_authorized(update):
+        return
+    await update.message.reply_text("Enviando señal de llamada al dispositivo...")
+    output = await run_script("activarLlamada.py", [])
+    await send_output(update, output, not output.startswith("El script terminó con código"))
+
+
 async def post_init(application: Application) -> None:
     from telegram import (
         BotCommand,
@@ -290,6 +303,7 @@ async def post_init(application: Application) -> None:
         BotCommand("libres", "Ver departamentos libres actualmente"),
         BotCommand("ocupados", "Ver departamentos ocupados actualmente"),
         BotCommand("bateria", "Consultar batería del dispositivo"),
+        BotCommand("llamada", "Activar llamada en el dispositivo"),
         BotCommand("verificar", "Verificar conexión de un depto"),
         BotCommand("passwords", "Obtener contraseñas de WiFi"),
         BotCommand("cambiarpass", "Cambiar contraseña de un depto"),
@@ -343,6 +357,9 @@ def main() -> None:
     application.add_handler(CommandHandler("consultarbateria", consultar_bateria_cmd))
     application.add_handler(CommandHandler("solicitarbateria", solicitar_bateria_cmd))
     application.add_handler(CommandHandler("obtenerbateria", obtener_bateria_cmd))
+    application.add_handler(CommandHandler("llamada", activar_llamada_cmd))
+    application.add_handler(CommandHandler("llamar", activar_llamada_cmd))
+    application.add_handler(CommandHandler("activarllamada", activar_llamada_cmd))
     application.add_handler(CommandHandler("estado", estado))
     application.add_handler(CommandHandler("pc", estado))
     application.add_handler(CommandHandler("ping", estado))
